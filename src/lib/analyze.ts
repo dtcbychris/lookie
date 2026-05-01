@@ -1,32 +1,46 @@
 import type { AnalysisResponse, AppSettings } from "../types";
 
+export type AnalyzeInput = {
+  imageBase64: string;
+  question: string;
+  /** Pre-rendered project overview (legacy field, still accepted). */
+  projectContext?: string;
+  /** Pre-rendered project brain block (overview + stack + brand + decisions). */
+  projectBrain?: string;
+  /** Pre-rendered recent-history block, never includes screenshots. */
+  recentHistoryContext?: string;
+};
+
 export interface VisionProvider {
-  analyze(input: {
-    imageBase64: string;
-    question: string;
-    projectContext?: string;
-  }): Promise<AnalysisResponse>;
+  analyze(input: AnalyzeInput): Promise<AnalysisResponse>;
 }
 
 const mockProvider: VisionProvider = {
-  async analyze({ question, projectContext }) {
+  async analyze({ question, projectBrain, recentHistoryContext }) {
     await new Promise((r) => setTimeout(r, 900));
     const focus = question.trim() || "this screen";
+    const brainNote = projectBrain
+      ? `Project brain attached (${projectBrain.length} chars).`
+      : "No project brain filled in yet.";
+    const histNote = recentHistoryContext
+      ? `Recent history attached.`
+      : "No prior analyses for this project.";
     return {
-      summary: `Mock analysis for: "${focus}". Wire up a real vision provider to get a true read of the screenshot.`,
+      summary: `Mock analysis for: "${focus}". ${brainNote} ${histNote} Wire up a real vision provider to get a true read of the screenshot.`,
       observations: [
         "This is a mock response generated locally without sending the screenshot anywhere.",
-        projectContext
-          ? `Project context received (${projectContext.length} chars) — it would be passed to the model.`
-          : "No project context provided. Add some in the project header for sharper answers.",
         "The capture pipeline is working: screenshot decoded, question received, response shape matches AnalysisResponse.",
+        projectBrain
+          ? "Brain content would be passed to the model as ongoing project memory."
+          : "Fill in the Project Brain to make real responses much sharper.",
       ],
       recommendedNextSteps: [
-        "Add an OPENAI_API_KEY or ANTHROPIC_API_KEY in your backend env.",
-        "Implement /api/analyze to call the provider with the image and question.",
-        "Switch the provider in Settings → AI provider from 'mock' to your chosen vendor.",
+        "Add an OPENAI_API_KEY in your server env.",
+        "Switch the provider in Settings → AI provider from 'mock' to 'openai'.",
+        "Capture a real screen and try again.",
       ],
-      promptForClaudeOrLovable: `Implement a serverless route /api/analyze that accepts { imageBase64, question, projectContext } and returns JSON matching AnalysisResponse {summary, observations[], recommendedNextSteps[], promptForClaudeOrLovable?, risksOrWarnings?}. Use ${"the configured provider"} and parse the model's output to that shape.`,
+      promptForClaudeOrLovable:
+        "Inspect api/_lib/openai.ts and confirm OPENAI_API_KEY is present in the server environment. If not, add it to .env (server-side only) and restart the dev server. Do not modify other files.",
       risksOrWarnings: [
         "Do not embed private API keys in the frontend bundle. Use a backend route.",
       ],
@@ -81,6 +95,8 @@ export async function analyzeScreenshot(args: {
   imageDataUrl: string;
   question: string;
   projectContext?: string;
+  projectBrain?: string;
+  recentHistoryContext?: string;
   settings: AppSettings;
 }): Promise<AnalysisResponse> {
   const provider = getProvider(args.settings);
@@ -88,5 +104,7 @@ export async function analyzeScreenshot(args: {
     imageBase64: dataUrlToBase64(args.imageDataUrl),
     question: args.question,
     projectContext: args.projectContext,
+    projectBrain: args.projectBrain,
+    recentHistoryContext: args.recentHistoryContext,
   });
 }

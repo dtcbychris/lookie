@@ -10,9 +10,16 @@ import type {
 import { captureScreenOnce } from "../lib/capture";
 import { analyzeScreenshot } from "../lib/analyze";
 import { uid } from "../lib/storage";
+import {
+  formatProjectBrain,
+  getRecentProjectContext,
+  projectBrainSummary,
+  recentHistoryCount,
+} from "../lib/projectContext";
 import { CapturePanel } from "./CapturePanel";
 import { AnalysisView } from "./AnalysisView";
 import { HistoryList } from "./HistoryList";
+import { ProjectBrainPanel } from "./ProjectBrainPanel";
 
 type Props = {
   project: Project;
@@ -33,8 +40,7 @@ export function ProjectWorkspace({
   onAddAnalysis,
   onDeleteAnalysis,
 }: Props) {
-  const [editingContext, setEditingContext] = useState(false);
-  const [contextDraft, setContextDraft] = useState(project.savedContext ?? "");
+  const [editingBrain, setEditingBrain] = useState(false);
   const [question, setQuestion] = useState("");
   const [captureState, setCaptureState] = useState<CaptureState>("idle");
   const [captureError, setCaptureError] = useState<string | null>(null);
@@ -54,13 +60,21 @@ export function ProjectWorkspace({
     setAnalysis(null);
     setAnalyzeError(null);
     setActiveHistoryId(null);
-    setEditingContext(false);
-    setContextDraft(project.savedContext ?? "");
-  }, [project.id, project.savedContext]);
+    setEditingBrain(false);
+  }, [project.id]);
 
   const projectHistory = useMemo(
     () => history.filter((h) => h.projectId === project.id),
     [history, project.id],
+  );
+
+  const brainSummary = useMemo(
+    () => projectBrainSummary(project),
+    [project],
+  );
+  const historyCount = useMemo(
+    () => recentHistoryCount(project.id, history),
+    [project.id, history],
   );
 
   async function handleCapture() {
@@ -98,10 +112,17 @@ export function ProjectWorkspace({
     setAnalyzeState("analyzing");
     setAnalyzeError(null);
     try {
+      const projectBrain = formatProjectBrain(project);
+      const recentHistoryContext = getRecentProjectContext(
+        project.id,
+        history,
+      );
       const response = await analyzeScreenshot({
         imageDataUrl,
         question: question.trim(),
         projectContext: project.savedContext,
+        projectBrain: projectBrain || undefined,
+        recentHistoryContext: recentHistoryContext || undefined,
         settings,
       });
       setAnalysis(response);
@@ -141,13 +162,27 @@ export function ProjectWorkspace({
     }
   }
 
-  function saveContext() {
+  function handleSaveBrain(next: Project) {
+    onUpdateProject(next);
+    setEditingBrain(false);
+  }
+
+  function handleRemoveDecision(index: number) {
+    const decisions = (project.decisions ?? []).filter((_, i) => i !== index);
     onUpdateProject({
       ...project,
-      savedContext: contextDraft,
+      decisions,
       updatedAt: new Date().toISOString(),
     });
-    setEditingContext(false);
+  }
+
+  function handleSaveDecision(text: string) {
+    const decisions = [...(project.decisions ?? []), text];
+    onUpdateProject({
+      ...project,
+      decisions,
+      updatedAt: new Date().toISOString(),
+    });
   }
 
   return (
@@ -163,12 +198,17 @@ export function ProjectWorkspace({
           <button
             type="button"
             className="btn-outline"
-            onClick={() => {
-              setContextDraft(project.savedContext ?? "");
-              setEditingContext((v) => !v);
-            }}
+            onClick={() => setEditingBrain((v) => !v)}
           >
-            {editingContext ? "Close context" : "Edit context"}
+            {editingBrain ? "Close brain" : "Project brain"}
+            {!editingBrain && brainSummary.hasAny ? (
+              <span className="ml-1.5 rounded bg-indigo-500/20 px-1.5 text-[10px] font-medium text-indigo-200">
+                {brainSummary.filledFields}/{brainSummary.totalFields}
+                {brainSummary.decisionsCount > 0
+                  ? ` · ${brainSummary.decisionsCount}d`
+                  : ""}
+              </span>
+            ) : null}
           </button>
           <button
             type="button"
@@ -187,32 +227,13 @@ export function ProjectWorkspace({
 
       <div className="flex-1 overflow-y-auto px-8 py-6">
         <div className="mx-auto flex max-w-4xl flex-col gap-6">
-          {editingContext ? (
-            <section className="card p-4">
-              <div className="label mb-2">Project context</div>
-              <textarea
-                className="input min-h-[120px] font-mono text-xs"
-                value={contextDraft}
-                onChange={(e) => setContextDraft(e.target.value)}
-                placeholder="Describe what this project is about so the AI can give sharper answers."
-              />
-              <div className="mt-3 flex justify-end gap-2">
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  onClick={() => setEditingContext(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={saveContext}
-                >
-                  Save context
-                </button>
-              </div>
-            </section>
+          {editingBrain ? (
+            <ProjectBrainPanel
+              project={project}
+              onSave={handleSaveBrain}
+              onClose={() => setEditingBrain(false)}
+              onRemoveDecision={handleRemoveDecision}
+            />
           ) : null}
 
           <CapturePanel
@@ -230,6 +251,13 @@ export function ProjectWorkspace({
               placeholder="What should I do next? What's wrong with this screen?"
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
+            />
+            <ContextIndicator
+              brainFilled={brainSummary.filledFields}
+              brainTotal={brainSummary.totalFields}
+              decisionsCount={brainSummary.decisionsCount}
+              historyCount={historyCount}
+              hasScreenshot={Boolean(imageDataUrl)}
             />
             <div className="mt-3 flex items-center justify-between">
               <p className="text-xs text-ink-500">
@@ -255,6 +283,7 @@ export function ProjectWorkspace({
             question={question}
             projectName={project.name}
             projectContext={project.savedContext}
+            onSaveDecision={handleSaveDecision}
           />
 
           <section>
@@ -277,6 +306,61 @@ export function ProjectWorkspace({
           </section>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ContextIndicator({
+  brainFilled,
+  brainTotal,
+  decisionsCount,
+  historyCount,
+  hasScreenshot,
+}: {
+  brainFilled: number;
+  brainTotal: number;
+  decisionsCount: number;
+  historyCount: number;
+  hasScreenshot: boolean;
+}) {
+  const items = [
+    {
+      label: "Project Brain",
+      detail:
+        brainFilled > 0 || decisionsCount > 0
+          ? `${brainFilled}/${brainTotal}` +
+            (decisionsCount > 0 ? ` + ${decisionsCount} decisions` : "")
+          : "empty",
+      active: brainFilled > 0 || decisionsCount > 0,
+    },
+    {
+      label: "Recent history",
+      detail: historyCount > 0 ? `${historyCount} item${historyCount === 1 ? "" : "s"}` : "none yet",
+      active: historyCount > 0,
+    },
+    {
+      label: "Current screenshot",
+      detail: hasScreenshot ? "captured" : "not captured",
+      active: hasScreenshot,
+    },
+  ];
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+      <span className="text-ink-500">Using:</span>
+      {items.map((it) => (
+        <span
+          key={it.label}
+          className={
+            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 " +
+            (it.active
+              ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-200"
+              : "border-ink-800 bg-ink-900 text-ink-500")
+          }
+        >
+          <span className="font-medium">{it.label}</span>
+          <span className="opacity-70">· {it.detail}</span>
+        </span>
+      ))}
     </div>
   );
 }

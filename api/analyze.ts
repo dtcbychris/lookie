@@ -71,6 +71,20 @@ function parseAnalyzeRequest(body: unknown): ParseResult {
   const question = typeof b.question === "string" ? b.question : "";
   const projectContext =
     typeof b.projectContext === "string" ? b.projectContext : undefined;
+  const projectBrain =
+    typeof b.projectBrain === "string" ? b.projectBrain : undefined;
+  const recentHistoryContext =
+    typeof b.recentHistoryContext === "string"
+      ? b.recentHistoryContext
+      : undefined;
 
-  return { value: { imageBase64, question, projectContext } };
+  return {
+    value: {
+      imageBase64,
+      question,
+      projectContext,
+      projectBrain,
+      recentHistoryContext,
+    },
+  };
 }

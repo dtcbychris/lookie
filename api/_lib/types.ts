@@ -12,5 +12,10 @@ export type AnalysisResponse = {
 export type AnalyzeRequest = {
   imageBase64: string;
   question: string;
+  /** Legacy / overview text. Falls back to projectBrain when absent. */
   projectContext?: string;
+  /** Pre-rendered project brain block (overview + stack + brand + decisions). */
+  projectBrain?: string;
+  /** Pre-rendered recent-history block, never includes screenshots. */
+  recentHistoryContext?: string;
 };

@@ -7,8 +7,10 @@ copy-pasteable prompt for Claude Code, Lovable, or Cursor.
 ## Status
 
 - **Phase 1** — capture + UX + mock provider + local history. ✅
-- **Phase 2** — real `/api/analyze` route backed by OpenAI vision. ✅ (this commit)
-- Phase 3+ — Anthropic provider, redaction, export/share, desktop wrapper.
+- **Phase 2** — real `/api/analyze` route backed by OpenAI vision. ✅
+- **Phase 3** — persistent project memory (Project Brain + decisions),
+  recent-history injection, sharper Brixley system prompt. ✅ (this commit)
+- Phase 4+ — Anthropic provider, redaction, export/share, desktop wrapper.
 
 ## Setup
 
@@ -94,9 +96,16 @@ Content-Type: application/json
 {
   "imageBase64": "<base64 PNG, no data URL prefix>",
   "question": "What should I do next?",
-  "projectContext": "Vibal is a marketplace for IRL marketing activations…"
+  "projectContext": "Vibal is a marketplace…",            // legacy/overview, optional
+  "projectBrain": "Overview:\nVibal…\n\nTech stack:\n…",   // pre-rendered, optional
+  "recentHistoryContext": "Recent project history:\n…"     // last 5 analyses, no images
 }
 ```
+
+`projectBrain` and `recentHistoryContext` are pre-rendered strings produced by
+`src/lib/projectContext.ts` so the server contract stays one image + a few
+text blocks. The server prefers `projectBrain` over `projectContext` when both
+are sent.
 
 Returns `200 AnalysisResponse` on success, or `{ "error": "..." }` with a
 non-2xx status. Status-code mapping:

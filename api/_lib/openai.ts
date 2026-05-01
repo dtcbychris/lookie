@@ -28,6 +28,8 @@ export async function analyzeWithOpenAI(
   const userText = buildUserText({
     question: input.question,
     projectContext: input.projectContext,
+    projectBrain: input.projectBrain,
+    recentHistoryContext: input.recentHistoryContext,
   });
 
   let res: Response;

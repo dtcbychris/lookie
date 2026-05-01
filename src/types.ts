@@ -10,7 +10,13 @@ export type Project = {
   id: string;
   name: string;
   description?: string;
+  /** Project overview. Kept named savedContext for backward compatibility. */
   savedContext?: string;
+  stack?: string;
+  brandRules?: string;
+  productGoals?: string;
+  userPreferences?: string;
+  decisions?: string[];
   createdAt: string;
   updatedAt: string;
 };

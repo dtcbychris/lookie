@@ -13,6 +13,7 @@ type Props = {
   question: string;
   projectName: string;
   projectContext?: string;
+  onSaveDecision?: (text: string) => void;
 };
 
 function CopyButton({
@@ -52,8 +53,11 @@ export function AnalysisView({
   question,
   projectName,
   projectContext,
+  onSaveDecision,
 }: Props) {
   const [target, setTarget] = useState<PromptTarget>("claude-code");
+  const [decisionDraft, setDecisionDraft] = useState<string | null>(null);
+  const [decisionSaved, setDecisionSaved] = useState(false);
 
   const wrappedPrompt = useMemo(() => {
     if (!response?.promptForClaudeOrLovable) return "";
@@ -185,6 +189,58 @@ export function AnalysisView({
               <li key={i}>{w}</li>
             ))}
           </ul>
+        </div>
+      ) : null}
+
+      {onSaveDecision ? (
+        <div className="p-5">
+          {decisionDraft === null ? (
+            <button
+              type="button"
+              className="btn-outline text-xs"
+              onClick={() => {
+                setDecisionSaved(false);
+                setDecisionDraft(response.summary);
+              }}
+            >
+              {decisionSaved
+                ? "Decision saved · save another"
+                : "+ Save as project decision"}
+            </button>
+          ) : (
+            <div className="rounded-md border border-ink-700 bg-ink-950 p-3">
+              <div className="label mb-2">New project decision</div>
+              <textarea
+                className="input min-h-[72px] text-sm"
+                value={decisionDraft}
+                onChange={(e) => setDecisionDraft(e.target.value)}
+                placeholder="One short, durable decision the future Brixley should remember."
+              />
+              <div className="mt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="btn-ghost text-xs"
+                  onClick={() => setDecisionDraft(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary text-xs"
+                  disabled={!decisionDraft.trim()}
+                  onClick={() => {
+                    const text = decisionDraft.trim();
+                    if (!text) return;
+                    onSaveDecision(text);
+                    setDecisionDraft(null);
+                    setDecisionSaved(true);
+                  }}
+                >
+                  Save decision
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : null}
     </section>
