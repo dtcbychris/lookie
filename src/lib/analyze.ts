@@ -36,18 +36,34 @@ const mockProvider: VisionProvider = {
 
 const remoteProvider: VisionProvider = {
   async analyze(input) {
-    const res = await fetch("/api/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    });
-    if (!res.ok) {
+    let res: Response;
+    try {
+      res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+    } catch {
       throw new Error(
-        `AI analysis failed (${res.status}). Check your API key or server logs.`,
+        "Could not reach /api/analyze. Is the backend running?",
       );
     }
-    const data = (await res.json()) as AnalysisResponse;
-    return data;
+
+    let body: unknown = null;
+    try {
+      body = await res.json();
+    } catch {
+      // Non-JSON body (e.g., HTML error page).
+    }
+
+    if (!res.ok) {
+      const message =
+        body && typeof body === "object" && "error" in body
+          ? String((body as { error: unknown }).error)
+          : `AI analysis failed (${res.status}). Check your API key or server logs.`;
+      throw new Error(message);
+    }
+    return body as AnalysisResponse;
   },
 };
 

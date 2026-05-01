@@ -252,6 +252,9 @@ export function ProjectWorkspace({
             state={analyzeState}
             response={analysis}
             errorMessage={analyzeError}
+            question={question}
+            projectName={project.name}
+            projectContext={project.savedContext}
           />
 
           <section>
