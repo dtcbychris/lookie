@@ -446,19 +446,138 @@ func _building_extras(b: MeshInstance3D, w: float, h: float, d: float, p: Vector
 		bal.material_override = bal_mat
 		b.add_child(bal)
 
+## Crown Casino: hand-authored landmark set piece at the crest hairpin —
+## podium hill, tiered belle-epoque block, columned portico, copper dome,
+## corner turrets, fountain plaza, gold crown emblem. The template for
+## bringing every landmark up to concept-art level.
 func _build_casino() -> void:
-	# Crown Casino sits inside the crest hairpin, +12m above the harbor
-	var base := Vector3(1636, 48.0, 356)
-	var gold := Pix.flat_mat(Color(0.85, 0.7, 0.35))
-	var cream := Pix.flat_mat(Color(0.92, 0.88, 0.78))
-	_box(Vector3(36, 58, 50), base + Vector3(0, 29, 0), gold)
-	_box(Vector3(42, 6, 56), base + Vector3(0, 61, 0), cream)   # cornice
-	_box(Vector3(22, 26, 30), base + Vector3(0, 77, 0), cream)  # dome block
-	_box(Vector3(20, 30, 26), base + Vector3(0, 15, -56), cream)
-	_box(Vector3(20, 30, 26), base + Vector3(0, 15, 56), cream)
-	_casino_sign = _label("CROWN CASINO", base + Vector3(-20, 70, 0), Vector3(-1, 0, 0), Color(1.0, 0.84, 0.2), 48, 0.09)
-	var glow := Pix.flat_mat(Color(1.0, 0.8, 0.25), 1.8)
-	_box(Vector3(1.5, 4, 34), base + Vector3(-19.5, 56, 0), glow)
+	var cx := 1636.0
+	var cz := 356.0
+	var base_y := 51.0  # podium top, just above the +48 road crest
+	var stone := Pix.flat_mat(Color(0.78, 0.72, 0.6))
+	var cream := Pix.flat_mat(Color(0.93, 0.89, 0.78))
+	var cream_lit := Pix.flat_mat(Color(0.95, 0.91, 0.8), 0.12)
+	var gold := Pix.flat_mat(Color(0.85, 0.68, 0.28), 0.25)
+	var copper := Pix.flat_mat(Color(0.4, 0.62, 0.52))
+	var glow := Pix.flat_mat(Color(1.0, 0.85, 0.45), 1.6)
+	var red := Pix.flat_mat(Color(0.7, 0.15, 0.18))
+
+	# podium hill from harbor grade up to the crest
+	_box(Vector3(42, base_y, 56), Vector3(cx, base_y * 0.5, cz), stone)
+	_box(Vector3(46, 2, 60), Vector3(cx, base_y + 1, cz), cream)  # plaza slab
+
+	# tiered main block with gold cornice bands
+	_box(Vector3(32, 14, 44), Vector3(cx, base_y + 9, cz), cream_lit)
+	_box(Vector3(34, 1.2, 46), Vector3(cx, base_y + 16.6, cz), gold)
+	_box(Vector3(27, 11, 38), Vector3(cx, base_y + 22.5, cz), cream)
+	_box(Vector3(29, 1.2, 40), Vector3(cx, base_y + 28.6, cz), gold)
+	_box(Vector3(20, 8, 28), Vector3(cx, base_y + 33, cz), cream_lit)
+
+	# lit window strips on the first two tiers
+	for side in [-1.0, 1.0]:
+		for k in 5:
+			_box(Vector3(1.0, 6, 2.2), Vector3(cx + side * 16.2, base_y + 9, cz - 16 + k * 8), glow)
+			_box(Vector3(1.0, 5, 1.8), Vector3(cx + side * 13.7, base_y + 22.5, cz - 12 + k * 6), glow)
+		for k in 3:
+			_box(Vector3(2.2, 6, 1.0), Vector3(cx - 10 + k * 10, base_y + 9, cz + side * 22.2), glow)
+
+	# columned portico facing the descent road (west)
+	for k in 4:
+		_box(Vector3(1.6, 9, 1.6), Vector3(cx - 19, base_y + 6.5, cz - 9 + k * 6), cream)
+	_box(Vector3(7, 1.6, 24), Vector3(cx - 19, base_y + 11.8, cz), cream)
+	_box(Vector3(7.6, 1.0, 25), Vector3(cx - 19, base_y + 12.9, cz), red)  # awning trim
+	_box(Vector3(10, 0.4, 8), Vector3(cx - 18, base_y + 2.3, cz), red)     # red carpet
+	for k in 3:
+		_box(Vector3(2.5, 0.6, 20), Vector3(cx - 24 - k * 2.5, base_y + 1.8 - k * 0.6, cz), cream)  # steps
+
+	# copper dome with gold finial
+	var drum := MeshInstance3D.new()
+	var dc := CylinderMesh.new()
+	dc.top_radius = 8.0
+	dc.bottom_radius = 9.0
+	dc.height = 5.0
+	dc.radial_segments = 10
+	drum.mesh = dc
+	drum.material_override = cream
+	drum.position = Vector3(cx, base_y + 39.5, cz)
+	add_child(drum)
+	var dome := MeshInstance3D.new()
+	var ds := SphereMesh.new()
+	ds.radius = 9.0
+	ds.height = 11.0
+	ds.radial_segments = 10
+	ds.rings = 6
+	dome.mesh = ds
+	dome.material_override = copper
+	dome.position = Vector3(cx, base_y + 44, cz)
+	add_child(dome)
+	_box(Vector3(1.2, 5, 1.2), Vector3(cx, base_y + 51, cz), gold)
+
+	# corner turrets with mini domes
+	for sx in [-1.0, 1.0]:
+		for sz in [-1.0, 1.0]:
+			var tx: float = cx + sx * 14.0
+			var tz: float = cz + sz * 19.0
+			var turret := MeshInstance3D.new()
+			var tc := CylinderMesh.new()
+			tc.top_radius = 2.6
+			tc.bottom_radius = 2.6
+			tc.height = 20.0
+			tc.radial_segments = 8
+			turret.mesh = tc
+			turret.material_override = cream
+			turret.position = Vector3(tx, base_y + 10, tz)
+			add_child(turret)
+			var cap := MeshInstance3D.new()
+			var cs := SphereMesh.new()
+			cs.radius = 3.2
+			cs.height = 4.4
+			cs.radial_segments = 8
+			cs.rings = 4
+			cap.mesh = cs
+			cap.material_override = copper
+			cap.position = Vector3(tx, base_y + 21, tz)
+			add_child(cap)
+
+	# gold crown emblem above the portico
+	_box(Vector3(1.5, 1.8, 11), Vector3(cx - 17.5, base_y + 15.2, cz), gold)
+	for k in 3:
+		_box(Vector3(1.5, 3.2, 1.8), Vector3(cx - 17.5, base_y + 17.4, cz - 3.6 + k * 3.6), gold)
+	_box(Vector3(1.0, 1.0, 1.0), Vector3(cx - 18.2, base_y + 16.4, cz), Pix.flat_mat(Color(0.85, 0.15, 0.2), 0.8))
+
+	# fountain plaza
+	var basin := MeshInstance3D.new()
+	var bc := CylinderMesh.new()
+	bc.top_radius = 5.0
+	bc.bottom_radius = 5.5
+	bc.height = 1.6
+	bc.radial_segments = 10
+	basin.mesh = bc
+	basin.material_override = stone
+	basin.position = Vector3(cx, base_y + 2.6, cz - 34)
+	add_child(basin)
+	var pool := MeshInstance3D.new()
+	var pc := CylinderMesh.new()
+	pc.top_radius = 4.4
+	pc.bottom_radius = 4.4
+	pc.height = 0.4
+	pc.radial_segments = 10
+	pool.mesh = pc
+	pool.material_override = Pix.flat_mat(Color(0.3, 0.65, 0.9), 0.5)
+	pool.position = Vector3(cx, base_y + 3.4, cz - 34)
+	add_child(pool)
+	_box(Vector3(1.2, 4, 1.2), Vector3(cx, base_y + 5, cz - 34), stone)
+
+	# hedges and palms lining the plaza
+	var hedge := Pix.flat_mat(Color(0.22, 0.45, 0.25))
+	for k in 4:
+		_box(Vector3(3, 2.2, 8), Vector3(cx - 13 + k * 9, base_y + 2.6, cz + 26), hedge)
+		_box(Vector3(3, 2.2, 8), Vector3(cx - 13 + k * 9, base_y + 2.6, cz - 26), hedge)
+	_palm(Vector3(cx - 16, base_y + 1.5, cz + 22), 0.85)
+	_palm(Vector3(cx - 16, base_y + 1.5, cz - 22), 0.85)
+
+	# marquee sign, pulsing (kept from before)
+	_casino_sign = _label("CROWN CASINO", Vector3(cx - 21, base_y + 20, cz), Vector3(-1, 0, 0), Color(1.0, 0.84, 0.2), 48, 0.085)
 
 # --- grandstands ---------------------------------------------------------------
 
