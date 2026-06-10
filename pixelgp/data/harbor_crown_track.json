@@ -1,0 +1,321 @@
+{
+  "track": "Harbor Crown Circuit",
+  "theme": "Monaco-inspired luxury coastal street circuit",
+  "source_art": "monaco overview crop, 975x766 (placeholder; contains real-world marks, regenerate per art spec)",
+  "coordinate_space": "art pixels, origin top-left, y down; multiply by world scale of choice",
+  "direction": "start at checkered flag heading +x (east); loop is counter-screen-clockwise",
+  "centerline_control_points": [
+    [
+      250,
+      590
+    ],
+    [
+      340,
+      584
+    ],
+    [
+      430,
+      568
+    ],
+    [
+      468,
+      558
+    ],
+    [
+      486,
+      563
+    ],
+    [
+      489,
+      577
+    ],
+    [
+      477,
+      591
+    ],
+    [
+      380,
+      615
+    ],
+    [
+      250,
+      624
+    ],
+    [
+      168,
+      629
+    ],
+    [
+      124,
+      642
+    ],
+    [
+      104,
+      670
+    ],
+    [
+      108,
+      700
+    ],
+    [
+      136,
+      728
+    ],
+    [
+      250,
+      748
+    ],
+    [
+      420,
+      754
+    ],
+    [
+      590,
+      748
+    ],
+    [
+      700,
+      735
+    ],
+    [
+      788,
+      704
+    ],
+    [
+      818,
+      686
+    ],
+    [
+      842,
+      662
+    ],
+    [
+      817,
+      634
+    ],
+    [
+      806,
+      614
+    ],
+    [
+      824,
+      585
+    ],
+    [
+      809,
+      552
+    ],
+    [
+      823,
+      520
+    ],
+    [
+      809,
+      491
+    ],
+    [
+      826,
+      462
+    ],
+    [
+      838,
+      432
+    ],
+    [
+      846,
+      400
+    ],
+    [
+      851,
+      352
+    ],
+    [
+      851,
+      314
+    ],
+    [
+      849,
+      250
+    ],
+    [
+      853,
+      190
+    ],
+    [
+      849,
+      136
+    ],
+    [
+      833,
+      107
+    ],
+    [
+      801,
+      113
+    ],
+    [
+      787,
+      138
+    ],
+    [
+      783,
+      176
+    ],
+    [
+      791,
+      216
+    ],
+    [
+      779,
+      252
+    ],
+    [
+      748,
+      272
+    ],
+    [
+      700,
+      265
+    ],
+    [
+      650,
+      260
+    ],
+    [
+      590,
+      267
+    ],
+    [
+      532,
+      277
+    ],
+    [
+      476,
+      288
+    ],
+    [
+      420,
+      300
+    ],
+    [
+      352,
+      312
+    ],
+    [
+      300,
+      318
+    ],
+    [
+      252,
+      322
+    ],
+    [
+      215,
+      345
+    ],
+    [
+      196,
+      372
+    ],
+    [
+      184,
+      404
+    ],
+    [
+      180,
+      436
+    ],
+    [
+      187,
+      462
+    ],
+    [
+      178,
+      494
+    ],
+    [
+      167,
+      522
+    ],
+    [
+      150,
+      548
+    ],
+    [
+      124,
+      573
+    ],
+    [
+      113,
+      587
+    ],
+    [
+      126,
+      599
+    ],
+    [
+      155,
+      597
+    ]
+  ],
+  "spline": "closed Catmull-Rom, 14 samples per segment",
+  "start_finish_art_xy": [
+    335,
+    584
+  ],
+  "tunnel_section": {
+    "note": "off-canvas closure invented to bridge the painted art's harbor gap; in the 3D build this becomes a real tunnel with elevation",
+    "art_region": "y > 686, 104 < x < 782"
+  },
+  "elevation_intent": {
+    "note": "flat in prototype; for 3D: climb from turn-2 U up the right-side esses (+12m over the section), crest at top hairpin, descend through casino road back to harbor level, tunnel slightly below harbor grade"
+  },
+  "proven_tuning": {
+    "comment": "validated by headless 4-car AI sim: all laps 41-45s, sub-second spread, no cuts. Units: world px (art px x 2) and seconds.",
+    "MAXV": 215,
+    "ACCEL": 150,
+    "BRAKE": 330,
+    "DRAG": 0.62,
+    "LATG": 140,
+    "track_half_width_world": 23,
+    "wall_clamp": "lim = HALF - 5 - clamp(curvature*200, 0, 6)",
+    "wall_speed_loss": "clamp((|v_normal| - 12) / 220, 0, 0.5) -- grazing must be near-free or AI laps go bimodal",
+    "boost_multiplier": 1.38,
+    "ai_braking": "vAllow = min over lookahead k of sqrt(LATG/curv_k + 2*BRAKE*0.8*dist_k); vmax = min(MAXV, vAllow*0.89)*skill",
+    "ai_steer_gain": 4.2,
+    "slipstream": "+9% vmax when within 55px behind a car ahead",
+    "checkpoints": 8,
+    "checkpoint_anticut": "radius HALF*1.6 AND nearest-sample index within 22 of checkpoint index",
+    "laps": 3
+  },
+  "teams": [
+    {
+      "name": "RED FALCON",
+      "primary": "#e23b2e",
+      "secondary": "#8f1d14"
+    },
+    {
+      "name": "BLUE VIPER",
+      "primary": "#2f6fe0",
+      "secondary": "#173e8e"
+    },
+    {
+      "name": "GOLD DUST",
+      "primary": "#e0a92f",
+      "secondary": "#8e6a17"
+    },
+    {
+      "name": "SILVER BULLET",
+      "primary": "#c9ccd4",
+      "secondary": "#7b7e86"
+    }
+  ],
+  "sponsors": [
+    "CROWN CASINO",
+    "VELOBANK",
+    "TURBO COLA",
+    "APEX OIL",
+    "AZURE BAY MARINA",
+    "RIVIERA RACING LEAGUE"
+  ]
+}

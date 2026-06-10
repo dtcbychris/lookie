@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://b8hcclandmark1"]
+
+[ext_resource type="Script" path="res://tests/landmark_shots.gd" id="1_lm"]
+
+[node name="LandmarkShots" type="Node"]
+script = ExtResource("1_lm")
