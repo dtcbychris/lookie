@@ -7,6 +7,8 @@ const Pix = preload("res://scripts/pixel_textures.gd")
 var _mesh_root: Node3D
 var _flame: MeshInstance3D
 var _brake: MeshInstance3D
+var _sparks: CPUParticles3D
+var _impact_seen := -10.0
 
 func build(primary: Color, secondary: Color) -> void:
 	_mesh_root = Node3D.new()
@@ -36,6 +38,24 @@ func build(primary: Color, secondary: Color) -> void:
 	_flame.visible = false
 	_brake = _part(Vector3(0.8, 1.0, 3.0), Vector3(-8.9, 2.6, 0), Pix.flat_mat(Color(1.0, 0.1, 0.05), 2.5))
 	_brake.visible = false
+	# wall-hit spark burst
+	_sparks = CPUParticles3D.new()
+	_sparks.amount = 14
+	_sparks.one_shot = true
+	_sparks.explosiveness = 1.0
+	_sparks.lifetime = 0.32
+	_sparks.emitting = false
+	_sparks.spread = 70.0
+	_sparks.direction = Vector3(0, 1, 0)
+	_sparks.initial_velocity_min = 25.0
+	_sparks.initial_velocity_max = 55.0
+	_sparks.gravity = Vector3(0, -110, 0)
+	var spark_mesh := BoxMesh.new()
+	spark_mesh.size = Vector3(0.7, 0.7, 0.7)
+	spark_mesh.material = Pix.flat_mat(Color(1.0, 0.7, 0.2), 2.5)
+	_sparks.mesh = spark_mesh
+	_sparks.position = Vector3(0, 2.0, 0)
+	add_child(_sparks)
 
 func _part(size: Vector3, pos: Vector3, mat: Material) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
@@ -60,3 +80,6 @@ func sync(phys, track) -> void:
 		_mesh_root.rotation.z = atan2(ahead.y - behind.y, dd) * 0.8
 	_flame.visible = phys.boosting
 	_brake.visible = phys.braking and phys.speed > 20.0
+	if phys.impact_stamp > _impact_seen and phys.impact_mag > 0.05:
+		_impact_seen = phys.impact_stamp
+		_sparks.restart()

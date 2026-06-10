@@ -25,14 +25,17 @@ func _process(_dt: float) -> void:
 	match f:
 		260:
 			_shot("01_start")
-		760:
-			_shot("02_harbor_u")
-		1150:
+		820:
+			_shot("02_tunnel_approach")
+		950:
 			_shot("03_tunnel")
 		1750:
 			_shot("04_esses_climb")
+		2000:
+			_set_camera_mode(1)
 		2150:
-			_shot("05_casino_hairpin")
+			_shot("05_showcase_cam")
+			_set_camera_mode(0)
 		2250:
 			_overview(true)
 		2400:
@@ -42,6 +45,10 @@ func _process(_dt: float) -> void:
 			_shot("07_late_race")
 		3500:
 			get_tree().quit()
+
+func _set_camera_mode(m: int) -> void:
+	var cam := main.find_child("FollowCamera", true, false)
+	cam.mode = m
 
 func _overview(on: bool) -> void:
 	var cam := main.find_child("FollowCamera", true, false)

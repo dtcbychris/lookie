@@ -15,11 +15,13 @@ const CHECKPOINT_INDEX_WINDOW := 22
 const LAPS := 3
 
 ## Hand-authored elevation per control point (meters), following the JSON's
-## elevation_intent: harbor level at start, slight dip through the tunnel,
-## climb the esses to the casino crest (+12 m), descend back to the harbor.
+## elevation_intent: harbor level at start, climb the esses to the casino
+## crest (+12 m), descend back to the harbor. The tunnel keeps only a token
+## dip: a deeper trench sinks the road below the causeway ground slab and the
+## camera loses the car before the tunnel (playtest bug).
 const ELEVATION_M := [
 	0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-	0.0, -0.2, -0.5, -1.0, -1.5, -1.5, -1.2, -0.6, 0.0, 0.3,
+	0.0, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, 0.0, 0.0, 0.3,
 	0.8, 1.6, 2.5, 3.4, 4.4, 5.4, 6.4, 7.4, 8.4, 9.2,
 	9.9, 10.5, 11.2, 11.7, 12.0, 12.0, 12.0, 12.0, 11.8, 11.4,
 	11.0, 10.5, 10.0, 9.4, 8.8, 8.2, 7.6, 7.0, 6.5, 6.1,

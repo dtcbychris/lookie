@@ -20,6 +20,10 @@ var _center: Label
 var _sub_center: Label
 var _board_rows: Array[Label] = []
 var _minimap: Control
+var _toast: Label
+var _toast_t := 0.0
+var _flash: ColorRect
+var _impact_seen := -10.0
 
 func setup(p_race, p_track, p_colors: Array) -> void:
 	race = p_race
@@ -96,10 +100,24 @@ func _build() -> void:
 	_minimap.position = Vector2(636 - _minimap.size.x, 292 - _minimap.size.y)
 	add_child(_minimap)
 
+	# red impact flash (under the labels)
+	_flash = ColorRect.new()
+	_flash.color = Color(0.9, 0.1, 0.05, 0.0)
+	_flash.size = Vector2(640, 360)
+	_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_flash)
+	move_child(_flash, 0)
+
 	_center = _make_label(Vector2(170, 130), 42, Color(1.0, 0.85, 0.3), true)
 	_center.size = Vector2(300, 60)
 	_sub_center = _make_label(Vector2(170, 180), 14, Color.WHITE, true)
 	_sub_center.size = Vector2(300, 20)
+	_toast = _make_label(Vector2(120, 218), 11, Color(0.5, 0.95, 1.0), true)
+	_toast.size = Vector2(400, 16)
+
+func toast(msg: String) -> void:
+	_toast.text = msg
+	_toast_t = 2.6
 
 func _fmt(t: float) -> String:
 	if t == INF or t <= 0.0:
@@ -110,6 +128,13 @@ func _process(_dt: float) -> void:
 	if race == null:
 		return
 	var car = race.cars[race.player_index]
+	# impact flash decays; toast fades out
+	if car.impact_stamp > _impact_seen:
+		_impact_seen = car.impact_stamp
+		_flash.color.a = minf(0.08 + car.impact_mag * 0.6, 0.4)
+	_flash.color.a *= exp(-5.0 * _dt)
+	_toast_t = maxf(_toast_t - _dt, 0.0)
+	_toast.modulate.a = clampf(_toast_t * 2.0, 0.0, 1.0)
 	_lap.text = "LAP %d/%d" % [mini(car.lap + 1, track.LAPS), track.LAPS]
 	var t := maxf(race.race_time, 0.0)
 	_time.text = "TIME %s" % _fmt(t)
@@ -117,6 +142,8 @@ func _process(_dt: float) -> void:
 	_pos.text = "P%d/%d" % [race.player_position(), race.cars.size()]
 	_speed.text = "%3d" % int(car.speed * 1.25)
 	_boost_fill.size.x = 94.0 * car.boost
+	# boost regen is locked after wall contact — show it
+	_boost_fill.color = Color(0.55, 0.25, 0.2) if car.boost_lock > 0.0 else Color(0.25, 0.85, 1.0)
 	for i in 4:
 		var ci: int = race.positions[i] if i < race.positions.size() else i
 		_board_rows[i].text = "P%d %s" % [i + 1, race.cars[ci].car_name]

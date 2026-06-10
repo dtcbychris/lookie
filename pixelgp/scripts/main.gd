@@ -13,11 +13,18 @@ const CarNode = preload("res://scripts/car_node.gd")
 const RaceManager = preload("res://scripts/race_manager.gd")
 const FollowCamera = preload("res://scripts/follow_camera.gd")
 const HUD = preload("res://scripts/hud.gd")
+const RaceAudio = preload("res://scripts/race_audio.gd")
+const ControlPresets = preload("res://scripts/control_presets.gd")
 
 const AI_SKILLS := [0.99, 0.962, 0.935]
 const AI_LANES := [-5.0, 5.0, -5.0]
 
+var _cam: Camera3D
+var _hud: CanvasLayer
+
 func _ready() -> void:
+	ControlPresets.load_settings()
+	ControlPresets.apply_preset(ControlPresets.settings["preset"])
 	# pixel pipeline: window 1280x720 -> SubViewport 640x360, nearest upscale
 	var svc := SubViewportContainer.new()
 	svc.stretch = true
@@ -78,10 +85,26 @@ func _ready() -> void:
 	cam.name = "FollowCamera"
 	world.add_child(cam)
 	cam.setup(race, track)
+	cam.mode = ControlPresets.settings["camera"]
+	_cam = cam
 
 	var hud: CanvasLayer = HUD.new()
 	sv.add_child(hud)
 	hud.setup(race, track, team_colors)
+	_hud = hud
+
+	var audio: Node = RaceAudio.new()
+	add_child(audio)
+	audio.setup(race)
+
+func _process(_dt: float) -> void:
+	if Input.is_action_just_pressed("controls_preset"):
+		var p: Dictionary = ControlPresets.cycle_preset()
+		_hud.toast("CONTROLS: %s  (%s)" % [p["name"], p["desc"]])
+	if Input.is_action_just_pressed("camera"):
+		_cam.mode = 1 - _cam.mode
+		ControlPresets.set_camera(_cam.mode)
+		_hud.toast("CAMERA: %s" % ("SHOWCASE" if _cam.mode == 1 else "RACE"))
 
 func _setup_environment(world: Node3D) -> void:
 	var env := Environment.new()

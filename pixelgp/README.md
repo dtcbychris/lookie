@@ -23,9 +23,22 @@ with nearest filtering.
 | W / Up | throttle |
 | S / Down | brake |
 | A / D or Left / Right | steer |
-| Shift / Space | boost (meter regenerates) |
+| Shift / Space | boost (meter regenerates; locked for 2s after wall contact) |
+| T | cycle control preset: CLASSIC (above) / DRIVER (A brake, D gas, arrows steer) |
+| C | toggle camera: RACE (overhead) / SHOWCASE (lower 3/4) |
 | Tab | toggle full-circuit overview camera |
 | R | restart race |
+
+Preset and camera choices persist in `user://pixelgp_settings.cfg`.
+
+### Handling notes (post-playtest tune)
+
+- Coasting barely slows you — braking is the skill tool for hairpins.
+- Wall penalty scales with impact angle: parallel grazing is near-free,
+  slamming in costs real speed, drains boost, and pauses boost regen for 2s.
+  You can't boost your way out of sloppy corners anymore.
+- All sounds are procedurally synthesized (`scripts/audio_gen.gd`) —
+  placeholder-quality by design, swappable for real sound design later.
 
 ## Tests / verification
 
@@ -79,4 +92,8 @@ Units: 1 Godot unit = 1 "world px" (art px × 2), matching `proven_tuning`.
 - Cars are ghost-ish: simple push-apart contact, no damage.
 - AI ignores boost; player-only mechanic for now.
 - Placeholder art language: procedural textures, box buildings, default font.
+- The tunnel runs at harbor grade (token -0.1m dip): a real below-grade trench
+  needs the causeway ground carved around the road corridor — deferred to the
+  art pass.
+- AI cars are silent; only the player car has engine audio.
 - Real-world-mark-free by construction (fictional teams/sponsors from JSON).

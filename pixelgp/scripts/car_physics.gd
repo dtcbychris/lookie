@@ -34,11 +34,20 @@ var finished := false
 var finish_time := 0.0
 
 var boost := 0.5
+var boost_lock := 0.0   # wall contact pauses boost regen — mistakes cost the
+						# exact resource used to mask them
 var boosting := false
 var braking := false
 var wall_hit := false
+var impact_stamp := -10.0  # race time of last wall impact (for fx/audio)
+var impact_mag := 0.0      # speed-loss fraction of that impact
 var wrong_way := false
 var _idx_delta_ema := 0.0
+
+## Coasting decelerates gently; braking is the skill tool. Full proven DRAG
+## made lift-and-coast nearly as strong as braking (playtest: brake felt
+## irrelevant), so only part of it applies.
+const COAST_DRAG_SCALE := 0.55
 
 func setup(p_track, slot: int) -> void:
 	track = p_track
@@ -70,15 +79,16 @@ func step(dt: float, t_now: float, input: Dictionary) -> void:
 	braking = brake_in > 0.1
 
 	boosting = bool(input.get("boost", false)) and boost > 0.02
+	boost_lock = maxf(boost_lock - dt, 0.0)
 	if boosting:
 		boost = maxf(boost - 0.4 * dt, 0.0)
-	else:
-		boost = minf(boost + 0.07 * dt, 1.0)
+	elif boost_lock <= 0.0:
+		boost = minf(boost + 0.045 * dt, 1.0)
 
 	var vmax := MAXV * (BOOST_MULT if boosting else 1.0) * float(input.get("vmax_scale", 1.0))
 	speed += ACCEL * (1.25 if boosting else 1.0) * throttle * dt
 	speed -= BRAKE * brake_in * dt
-	speed -= speed * DRAG * dt
+	speed -= speed * DRAG * COAST_DRAG_SCALE * dt
 	speed = clampf(speed, 0.0, vmax)
 
 	# grip-limited turn rate: v * w <= LATG
@@ -94,12 +104,12 @@ func step(dt: float, t_now: float, input: Dictionary) -> void:
 
 	prev_idx = idx
 	idx = track.nearest_index_hint(pos.x, pos.z, idx)
-	_clamp_to_walls()
+	_clamp_to_walls(t_now)
 	_snap_elevation()
 	_update_checkpoints(t_now)
 	_update_wrong_way()
 
-func _clamp_to_walls() -> void:
+func _clamp_to_walls(t_now: float) -> void:
 	wall_hit = false
 	var p: Vector3 = track.samples[idx]
 	var nrm: Vector3 = track.normals[idx]
@@ -115,8 +125,16 @@ func _clamp_to_walls() -> void:
 	var vz := sin(move_dir) * speed
 	var v_n := vx * nrm.x + vz * nrm.z
 	if v_n * side > 0.0:  # moving into the wall
-		# grazing must be near-free or AI laps go bimodal (prototype lesson)
-		speed *= 1.0 - clampf((absf(v_n) - 12.0) / 220.0, 0.0, 0.5)
+		# Penalty scales with impact angle: parallel grazing stays near-free
+		# (or AI laps go bimodal — prototype lesson), but slamming in at an
+		# angle is genuinely costly (playtest: walls were too forgiving).
+		var loss := clampf((absf(v_n) - 10.0) / 130.0, 0.0, 0.75)
+		speed *= 1.0 - loss
+		if loss > 0.02:
+			impact_stamp = t_now
+			impact_mag = loss
+			boost_lock = 2.0
+			boost = maxf(boost - loss * 0.5, 0.0)
 		vx -= nrm.x * v_n
 		vz -= nrm.z * v_n
 		if Vector2(vx, vz).length() > 1.0:
