@@ -36,7 +36,7 @@ func _row_point(i: int, lat: float, y_off: float) -> Vector3:
 	var s: Vector3 = track.samples[i % track.n]
 	return s + track.normals[i % track.n] * lat + Vector3(0, y_off, 0)
 
-func _ribbon(i_from: int, seg_count: int, lat_l: float, lat_r: float, y_off: float, mat: Material, closed := false) -> void:
+func _ribbon(i_from: int, seg_count: int, lat_l: float, lat_r: float, y_off: float, mat: Material, closed := false) -> MeshInstance3D:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var v := 0.0
@@ -72,6 +72,7 @@ func _ribbon(i_from: int, seg_count: int, lat_l: float, lat_r: float, y_off: flo
 	add_child(mi)
 	if closed:
 		pass  # loop seam is closed by the modulo wrap above
+	return mi
 
 func _wall(i_from: int, seg_count: int, lat: float, y_bot: float, y_top: float, mat: Material, skip: Callable = Callable()) -> void:
 	var st := SurfaceTool.new()
@@ -183,7 +184,7 @@ func _skirt(i_from: int, seg_count: int, lat: float, mat: Material) -> void:
 
 func _build_tunnel() -> void:
 	var wall_mat := Pix.flat_mat(Color(0.32, 0.34, 0.4))
-	var roof_mat := Pix.flat_mat(Color(0.13, 0.14, 0.2))
+	var roof_mat := Pix.flat_mat(Color(0.38, 0.36, 0.33))
 	var light_mat := Pix.flat_mat(Color(1.0, 0.85, 0.55), 2.2)
 	var i := 0
 	while i < track.n:
@@ -199,8 +200,12 @@ func _build_tunnel() -> void:
 			var k := run_start
 			while k < run_start + run:
 				if (k - run_start) % 10 == 0:
-					_ribbon(k, mini(4, run_start + run - k), track.HALF + 4.5, -track.HALF - 4.5, 14.0, roof_mat)
-					_ribbon(k, mini(2, run_start + run - k), 1.2, -1.2, 13.4, light_mat)
+					# elevated ribs cast huge hard shadows across the road
+					# that read as glitches from the race camera — disable
+					var rib := _ribbon(k, mini(4, run_start + run - k), track.HALF + 4.5, -track.HALF - 4.5, 14.0, roof_mat)
+					rib.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+					var lamp := _ribbon(k, mini(2, run_start + run - k), 1.2, -1.2, 13.4, light_mat)
+					lamp.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 				k += 1
 			_portal(run_start)
 			_portal(run_start + run)
@@ -217,6 +222,7 @@ func _portal(i: int) -> void:
 	arch.material_override = Pix.flat_mat(Color(0.5, 0.48, 0.45))
 	arch.position = p + Vector3(0, 14.0, 0)
 	arch.rotation.y = -atan2(t.z, t.x)
+	arch.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(arch)
 	var lbl := Label3D.new()
 	lbl.text = "AZURE TUNNEL"
