@@ -48,6 +48,9 @@ var _idx_delta_ema := 0.0
 ## made lift-and-coast nearly as strong as braking (playtest: brake felt
 ## irrelevant), so only part of it applies.
 const COAST_DRAG_SCALE := 0.55
+## Full BRAKE force stopped the car almost instantly (playtest) — soften it.
+## The AI braking formula must use the same effective force (ai_driver.gd).
+const BRAKE_EFFECT := 0.8
 
 func setup(p_track, slot: int) -> void:
 	track = p_track
@@ -87,7 +90,7 @@ func step(dt: float, t_now: float, input: Dictionary) -> void:
 
 	var vmax := MAXV * (BOOST_MULT if boosting else 1.0) * float(input.get("vmax_scale", 1.0))
 	speed += ACCEL * (1.25 if boosting else 1.0) * throttle * dt
-	speed -= BRAKE * brake_in * dt
+	speed -= BRAKE * BRAKE_EFFECT * brake_in * dt
 	speed -= speed * DRAG * COAST_DRAG_SCALE * dt
 	speed = clampf(speed, 0.0, vmax)
 

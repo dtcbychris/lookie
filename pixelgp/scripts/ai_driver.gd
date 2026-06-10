@@ -22,7 +22,10 @@ func control(others: Array) -> Dictionary:
 	var i0: int = car.idx
 	var n: int = track.n
 
-	# proven braking formula over distance lookahead
+	# proven braking formula over distance lookahead, using the same effective
+	# brake force the car actually has (BRAKE * BRAKE_EFFECT), with the
+	# prototype's 0.8 planning margin on top
+	var brake_eff: float = car.BRAKE * car.BRAKE_EFFECT
 	var v_allow_min: float = car.MAXV
 	var d := 0.0
 	var k := 0
@@ -31,7 +34,7 @@ func control(others: Array) -> Dictionary:
 		d += track.step_len[j]
 		k += 1
 		var cv: float = maxf(track.curvature[(i0 + k) % n], 0.0008)
-		v_allow_min = minf(v_allow_min, sqrt(car.LATG / cv + 2.0 * car.BRAKE * 0.8 * d))
+		v_allow_min = minf(v_allow_min, sqrt(car.LATG / cv + 2.0 * brake_eff * 0.8 * d))
 	var cv_now: float = maxf(track.curvature[i0], 0.0008)
 	v_allow_min = minf(v_allow_min, sqrt(car.LATG / cv_now))
 	var v_target: float = minf(car.MAXV, v_allow_min * 0.89) * skill

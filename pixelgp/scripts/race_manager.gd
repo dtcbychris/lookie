@@ -16,6 +16,7 @@ var state := State.COUNTDOWN
 var race_time := -3.6
 var positions: Array = []  # car indices, best first
 var player_finish_pos := 0
+var _brake_ramp := 0.0
 
 func _physics_process(dt: float) -> void:
 	if Input.is_action_just_pressed("restart"):
@@ -42,9 +43,15 @@ func _physics_process(dt: float) -> void:
 		player_finish_pos = positions.find(player_index) + 1
 
 func _player_input() -> Dictionary:
+	# brake ramps in over ~1/3s: a tap scrubs speed gently, a hold gives full
+	# force (playtest: instant full brake felt like hitting a wall)
+	if Input.is_action_pressed("brake"):
+		_brake_ramp = minf(_brake_ramp + get_physics_process_delta_time() / 0.35, 1.0)
+	else:
+		_brake_ramp = 0.0
 	return {
 		"throttle": Input.get_action_strength("throttle"),
-		"brake": Input.get_action_strength("brake"),
+		"brake": _brake_ramp,
 		"steer": Input.get_action_strength("steer_right") - Input.get_action_strength("steer_left"),
 		"boost": Input.is_action_pressed("boost"),
 	}

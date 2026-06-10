@@ -390,7 +390,7 @@ func _build_pit_lane() -> void:
 		var b := pts[s + 1]
 		var dir := (b - a).normalized()
 		var nrm := Vector2(dir.y, -dir.x) * 6.5
-		var y := 0.08
+		var y := 0.65  # just under road grade (ROAD_BASE) so the ramps read
 		var l0 := Vector3(a.x + nrm.x, y, a.y + nrm.y)
 		var r0 := Vector3(a.x - nrm.x, y, a.y - nrm.y)
 		var l1 := Vector3(b.x + nrm.x, y, b.y + nrm.y)
@@ -410,7 +410,7 @@ func _build_pit_lane() -> void:
 	_box(Vector3(330, 3.5, 1.6), Vector3(666, 1.75, 1196), Pix.flat_mat(Color(0.9, 0.9, 0.92)))
 	var box_mat := Pix.flat_mat(Color(0.95, 0.95, 0.95), 0.1)
 	for s in 4:
-		_box(Vector3(12, 0.1, 4.5), Vector3(580 + s * 60, 0.15, 1207), box_mat)
+		_box(Vector3(12, 0.1, 4.5), Vector3(580 + s * 60, 0.72, 1207), box_mat)
 	_label("PIT IN", Vector3(_w(213, 597).x, 6, _w(213, 597).y + 10), Vector3(-1, 0, 0.3), Color(0.4, 1.0, 0.5), 40)
 	_label("PIT OUT", Vector3(_w(437, 594).x, 6, _w(437, 594).y + 8), Vector3(1, 0, 0), Color(1.0, 0.6, 0.3), 40)
 	# pit crew gantries (kept inside the narrow pit corridor)

@@ -23,6 +23,10 @@ func setup(p_race, p_track) -> void:
 	race = p_race
 	track = p_track
 	fov = 30.0
+	# tight near plane = depth precision; the default 0.05 near makes the road
+	# z-fight the ground slab at distance ("see-through road" playtest bug)
+	near = 4.0
+	far = 6000.0
 	var lo := Vector3(INF, 0, INF)
 	var hi := Vector3(-INF, 0, -INF)
 	for p in track.samples:

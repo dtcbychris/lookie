@@ -48,6 +48,10 @@ func _ribbon(i_from: int, seg_count: int, lat_l: float, lat_r: float, y_off: flo
 		var l1 := _row_point(i1, lat_l, y_off)
 		var r1 := _row_point(i1, lat_r, y_off)
 		var v1: float = v + track.step_len[i0] * 0.08
+		# flat-up normals: uniform shading on climbs and descents, so the
+		# asphalt reads the same charcoal everywhere (slope-lit road looked
+		# washed out / "invisible" against the ground)
+		st.set_normal(Vector3.UP)
 		st.set_uv(Vector2(0, v)); st.add_vertex(l0)
 		st.set_uv(Vector2(1, v)); st.add_vertex(r0)
 		st.set_uv(Vector2(0, v1)); st.add_vertex(l1)
@@ -55,7 +59,6 @@ func _ribbon(i_from: int, seg_count: int, lat_l: float, lat_r: float, y_off: flo
 		st.set_uv(Vector2(1, v)); st.add_vertex(r0)
 		st.set_uv(Vector2(1, v1)); st.add_vertex(r1)
 		v = v1
-	st.generate_normals()
 	st.set_material(mat)
 	var mi := MeshInstance3D.new()
 	mi.mesh = st.commit()

@@ -34,6 +34,8 @@ Preset and camera choices persist in `user://pixelgp_settings.cfg`.
 ### Handling notes (post-playtest tune)
 
 - Coasting barely slows you — braking is the skill tool for hairpins.
+- Brake force ramps in over ~1/3s of holding: tap to scrub speed, hold for
+  a full stop. The AI plans with the same effective brake force.
 - Wall penalty scales with impact angle: parallel grazing is near-free,
   slamming in costs real speed, drains boost, and pauses boost regen for 2s.
   You can't boost your way out of sloppy corners anymore.

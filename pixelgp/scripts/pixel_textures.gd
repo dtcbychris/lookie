@@ -34,9 +34,9 @@ static func asphalt() -> ImageTexture:
 	var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
 	for y in 32:
 		for x in 32:
-			var v := 0.065 + rng.randf() * 0.025
+			var v := 0.05 + rng.randf() * 0.02
 			if rng.randf() < 0.04:
-				v += 0.04
+				v += 0.035
 			img.set_pixel(x, y, Color(v, v, v * 1.12))
 	return _tex(img)
 
@@ -104,8 +104,8 @@ static func ground(rng: RandomNumberGenerator) -> ImageTexture:
 	var img := Image.create(24, 24, false, Image.FORMAT_RGBA8)
 	for y in 24:
 		for x in 24:
-			var v := 0.36 + rng.randf() * 0.04
-			img.set_pixel(x, y, Color(v, v * 0.97, v * 0.9))
+			var v := 0.41 + rng.randf() * 0.045
+			img.set_pixel(x, y, Color(v, v * 0.95, v * 0.86))
 	return _tex(img)
 
 static func water_material() -> ShaderMaterial:

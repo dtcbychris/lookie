@@ -8,6 +8,7 @@ extends RefCounted
 
 const WORLD_SCALE := 2.0      # art px -> world units
 const ELEV_SCALE := 4.0       # elevation meters -> world units
+const ROAD_BASE := 0.8        # road rides clear of the ground slab (anti z-fight)
 const SAMPLES_PER_SEG := 14
 const HALF := 23.0            # road half width, world units
 const CHECKPOINT_COUNT := 8
@@ -16,12 +17,12 @@ const LAPS := 3
 
 ## Hand-authored elevation per control point (meters), following the JSON's
 ## elevation_intent: harbor level at start, climb the esses to the casino
-## crest (+12 m), descend back to the harbor. The tunnel keeps only a token
-## dip: a deeper trench sinks the road below the causeway ground slab and the
-## camera loses the car before the tunnel (playtest bug).
+## crest (+12 m), descend back to the harbor. The tunnel runs at harbor grade:
+## any dip puts the road surface within z-fighting range of the ground slab
+## (playtest: "see-through road") — the covered ribs sell the tunnel instead.
 const ELEVATION_M := [
 	0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-	0.0, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, 0.0, 0.0, 0.3,
+	0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3,
 	0.8, 1.6, 2.5, 3.4, 4.4, 5.4, 6.4, 7.4, 8.4, 9.2,
 	9.9, 10.5, 11.2, 11.7, 12.0, 12.0, 12.0, 12.0, 11.8, 11.4,
 	11.0, 10.5, 10.0, 9.4, 8.8, 8.2, 7.6, 7.0, 6.5, 6.1,
@@ -57,7 +58,7 @@ func load_track(path := "res://data/harbor_crown_track.json") -> void:
 	var ctrl: Array[Vector3] = []
 	for i in m:
 		var p: Array = cps[i]
-		ctrl.append(Vector3(p[0] * WORLD_SCALE, ELEVATION_M[i] * ELEV_SCALE, p[1] * WORLD_SCALE))
+		ctrl.append(Vector3(p[0] * WORLD_SCALE, ELEVATION_M[i] * ELEV_SCALE + ROAD_BASE, p[1] * WORLD_SCALE))
 	var pts := PackedVector3Array()
 	for i in m:
 		var p0 := ctrl[(i - 1 + m) % m]
