@@ -226,7 +226,8 @@ func _portal(i: int) -> void:
 	add_child(arch)
 	var lbl := Label3D.new()
 	lbl.text = "AZURE TUNNEL"
-	lbl.font_size = 60
+	lbl.font = Pix.pixel_font()
+	lbl.font_size = 48
 	lbl.pixel_size = 0.08
 	lbl.modulate = Color(0.5, 0.85, 1.0)
 	lbl.outline_size = 14
@@ -266,8 +267,9 @@ func _build_start_line() -> void:
 	add_child(beam)
 	var lbl := Label3D.new()
 	lbl.text = "HARBOR CROWN CIRCUIT"
-	lbl.font_size = 52
-	lbl.pixel_size = 0.09
+	lbl.font = Pix.pixel_font()
+	lbl.font_size = 32
+	lbl.pixel_size = 0.08
 	lbl.modulate = Color(1.0, 0.85, 0.3)
 	lbl.outline_size = 12
 	lbl.position = p + Vector3(0, 16.6, 0) - Vector3(track.tangents[0].x, 0, track.tangents[0].z) * 2.0
@@ -304,6 +306,7 @@ func _build_corner_signs() -> void:
 		add_child(panel)
 		var lbl := Label3D.new()
 		lbl.text = str(c["number"])
+		lbl.font = Pix.pixel_font()
 		lbl.font_size = 64
 		lbl.pixel_size = 0.07
 		lbl.modulate = Color(0.08, 0.08, 0.08)

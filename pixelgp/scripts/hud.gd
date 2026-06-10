@@ -5,6 +5,7 @@ extends CanvasLayer
 
 const MinimapScript = preload("res://scripts/minimap.gd")
 const RM = preload("res://scripts/race_manager.gd")
+const Pix = preload("res://scripts/pixel_textures.gd")
 
 var race  # RaceManager
 var track  # TrackData
@@ -42,46 +43,46 @@ func _panel(rect: Rect2) -> ColorRect:
 func _make_label(pos: Vector2, sz: int, color := Color.WHITE, center := false) -> Label:
 	var l := Label.new()
 	l.position = pos
+	l.add_theme_font_override("font", Pix.pixel_font())
 	l.add_theme_font_size_override("font_size", sz)
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
-	l.add_theme_constant_override("outline_size", 3)
+	l.add_theme_constant_override("outline_size", 2)
 	if center:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(l)
 	return l
 
 func _build() -> void:
-	_panel(Rect2(4, 4, 122, 52))
-	_lap = _make_label(Vector2(10, 6), 12, Color(1.0, 0.85, 0.3))
-	_time = _make_label(Vector2(10, 22), 12)
-	_best = _make_label(Vector2(10, 38), 12, Color(0.5, 0.9, 1.0))
+	_panel(Rect2(4, 4, 130, 46))
+	_lap = _make_label(Vector2(10, 7), 8, Color(1.0, 0.85, 0.3))
+	_time = _make_label(Vector2(10, 20), 8)
+	_best = _make_label(Vector2(10, 33), 8, Color(0.5, 0.9, 1.0))
 
-	_panel(Rect2(566, 4, 70, 30))
-	_pos = _make_label(Vector2(574, 7), 20, Color(1.0, 0.85, 0.3))
+	_panel(Rect2(560, 4, 76, 28))
+	_pos = _make_label(Vector2(568, 10), 16, Color(1.0, 0.85, 0.3))
 
-	var title := _make_label(Vector2(220, 4), 10, Color(0.85, 0.88, 0.95), true)
-	title.size = Vector2(200, 14)
-	title.text = "HARBOR CROWN CIRCUIT - RIVIERA RACING LEAGUE"
-	title.add_theme_font_size_override("font_size", 8)
+	var title := _make_label(Vector2(220, 6), 8, Color(0.85, 0.88, 0.95), true)
+	title.size = Vector2(200, 12)
+	title.text = "HARBOR CROWN CIRCUIT"
 
 	# leaderboard
-	_panel(Rect2(4, 252, 118, 76))
+	_panel(Rect2(4, 252, 126, 76))
 	for i in 4:
 		var chip := ColorRect.new()
 		chip.position = Vector2(10, 259 + i * 18)
 		chip.size = Vector2(8, 12)
 		add_child(chip)
 		chip.name = "chip%d" % i
-		var row := _make_label(Vector2(24, 257 + i * 18), 11)
+		var row := _make_label(Vector2(24, 261 + i * 18), 8)
 		_board_rows.append(row)
 
 	# speed + boost
 	_panel(Rect2(520, 296, 116, 60))
-	_speed = _make_label(Vector2(530, 300), 22)
-	var kmh := _make_label(Vector2(596, 310), 10, Color(0.7, 0.75, 0.85))
+	_speed = _make_label(Vector2(530, 302), 16)
+	var kmh := _make_label(Vector2(588, 308), 8, Color(0.7, 0.75, 0.85))
 	kmh.text = "KM/H"
-	var boost_label := _make_label(Vector2(530, 330), 9, Color(0.4, 0.9, 1.0))
+	var boost_label := _make_label(Vector2(530, 330), 8, Color(0.4, 0.9, 1.0))
 	boost_label.text = "BOOST"
 	var bar_bg := ColorRect.new()
 	bar_bg.color = Color(0.1, 0.12, 0.18)
@@ -108,12 +109,13 @@ func _build() -> void:
 	add_child(_flash)
 	move_child(_flash, 0)
 
-	_center = _make_label(Vector2(170, 130), 42, Color(1.0, 0.85, 0.3), true)
-	_center.size = Vector2(300, 60)
-	_sub_center = _make_label(Vector2(170, 180), 14, Color.WHITE, true)
-	_sub_center.size = Vector2(300, 20)
-	_toast = _make_label(Vector2(120, 218), 11, Color(0.5, 0.95, 1.0), true)
-	_toast.size = Vector2(400, 16)
+	_center = _make_label(Vector2(120, 134), 32, Color(1.0, 0.85, 0.3), true)
+	_center.size = Vector2(400, 48)
+	_center.add_theme_constant_override("outline_size", 4)
+	_sub_center = _make_label(Vector2(120, 182), 8, Color.WHITE, true)
+	_sub_center.size = Vector2(400, 14)
+	_toast = _make_label(Vector2(120, 218), 8, Color(0.5, 0.95, 1.0), true)
+	_toast.size = Vector2(400, 14)
 
 func toast(msg: String) -> void:
 	_toast.text = msg

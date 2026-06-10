@@ -93,7 +93,9 @@ Units: 1 Godot unit = 1 "world px" (art px × 2), matching `proven_tuning`.
   no pit-stop gameplay yet.
 - Cars are ghost-ish: simple push-apart contact, no damage.
 - AI ignores boost; player-only mechanic for now.
-- Placeholder art language: procedural textures, box buildings, default font.
+- Procedural placeholder art language: generated textures and box buildings
+  (now with district palettes, awnings, balconies, palette-quantized output,
+  and the Press Start 2P pixel font — OFL license in assets/fonts/).
 - The tunnel runs at harbor grade (token -0.1m dip): a real below-grade trench
   needs the causeway ground carved around the road corridor — deferred to the
   art pass.

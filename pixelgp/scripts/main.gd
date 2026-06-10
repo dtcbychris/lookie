@@ -31,6 +31,7 @@ func _ready() -> void:
 	svc.stretch_shrink = 2
 	svc.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	svc.set_anchors_preset(Control.PRESET_FULL_RECT)
+	svc.material = _palette_material()
 	add_child(svc)
 	var sv := SubViewport.new()
 	sv.own_world_3d = true
@@ -105,6 +106,32 @@ func _process(_dt: float) -> void:
 		_cam.mode = 1 - _cam.mode
 		ControlPresets.set_camera(_cam.mode)
 		_hud.toast("CAMERA: %s" % ("SHOWCASE" if _cam.mode == 1 else "RACE"))
+
+## Retro palette pass over the whole 640x360 frame: saturation boost, ordered
+## 2x2 dither, and per-channel posterization. "Everything is 3D, viewed
+## through a pixel lens."
+func _palette_material() -> ShaderMaterial:
+	var sh := Shader.new()
+	sh.code = """
+shader_type canvas_item;
+uniform float levels = 7.0;
+uniform float saturation = 1.12;
+void fragment() {
+	vec4 c = texture(TEXTURE, UV);
+	float g = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+	c.rgb = clamp(mix(vec3(g), c.rgb, saturation), 0.0, 1.0);
+	vec2 grid = floor(UV * vec2(640.0, 360.0));
+	float bx = mod(grid.x, 2.0);
+	float by = mod(grid.y, 2.0);
+	float bayer = bx * 2.0 + by * (3.0 - 4.0 * bx);  // 2x2 ordered dither
+	c.rgb += (bayer / 3.0 - 0.5) * (0.4 / levels);
+	c.rgb = floor(c.rgb * levels + 0.5) / levels;
+	COLOR = c;
+}
+"""
+	var m := ShaderMaterial.new()
+	m.shader = sh
+	return m
 
 func _setup_environment(world: Node3D) -> void:
 	var env := Environment.new()

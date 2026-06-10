@@ -10,11 +10,45 @@ const Pix = preload("res://scripts/pixel_textures.gd")
 const MARINA := Rect2(200, 652, 520, 80)
 const SEA := Rect2(-160, 772, 1260, 330)
 
+## City districts give each part of town its own palette (Monaco reads as
+## distinct quarters, not one uniform texture).
+enum District { OLD_TOWN, HARBOR, CASINO, CENTER }
+
+const DISTRICT_WALLS := {
+	District.OLD_TOWN: [Color(0.82, 0.62, 0.4), Color(0.8, 0.55, 0.42), Color(0.85, 0.7, 0.5), Color(0.78, 0.5, 0.34)],
+	District.HARBOR: [Color(0.9, 0.74, 0.72), Color(0.88, 0.84, 0.74), Color(0.72, 0.8, 0.84), Color(0.74, 0.85, 0.76)],
+	District.CASINO: [Color(0.92, 0.89, 0.8), Color(0.95, 0.92, 0.86), Color(0.88, 0.82, 0.66)],
+	District.CENTER: [Color(0.85, 0.78, 0.66), Color(0.75, 0.72, 0.62), Color(0.8, 0.76, 0.72), Color(0.7, 0.66, 0.6)],
+}
+const DISTRICT_AWNINGS := {
+	District.OLD_TOWN: [Color(0.25, 0.5, 0.3), Color(0.8, 0.45, 0.15)],
+	District.HARBOR: [Color(0.8, 0.2, 0.18), Color(0.15, 0.5, 0.6)],
+	District.CASINO: [Color(0.7, 0.5, 0.15), Color(0.45, 0.12, 0.2)],
+	District.CENTER: [Color(0.3, 0.35, 0.5), Color(0.55, 0.25, 0.25)],
+}
+const DISTRICT_ROOFS := {
+	District.OLD_TOWN: Color(0.62, 0.36, 0.25),
+	District.HARBOR: Color(0.5, 0.55, 0.6),
+	District.CASINO: Color(0.7, 0.66, 0.58),
+	District.CENTER: Color(0.48, 0.45, 0.42),
+}
+
+func _district(a: Vector2) -> int:
+	if a.x > 730.0 and a.y < 380.0:
+		return District.CASINO
+	if a.y > 560.0:
+		return District.HARBOR
+	if a.x < 270.0:
+		return District.OLD_TOWN
+	return District.CENTER
+
 var track  # TrackData
 var _rng := RandomNumberGenerator.new()
 var _flags: Array[Node3D] = []
 var _sea_yachts: Array[Node3D] = []
 var _casino_sign: Label3D
+var _crowd_anims: Array = []  # {"mat": StandardMaterial3D, "frames": [Texture2D, Texture2D]}
+var _crowd_frame := 0
 
 func build(p_track) -> void:
 	track = p_track
@@ -43,6 +77,12 @@ func _process(_delta: float) -> void:
 		y.position.y = -3.2 + sin(t * 1.2 + float(i)) * 0.3
 	if _casino_sign:
 		_casino_sign.modulate.a = 0.75 + 0.25 * sin(t * 4.0)
+	# two-frame crowd bob
+	var fi := 0 if fmod(t, 0.7) < 0.35 else 1
+	if fi != _crowd_frame:
+		_crowd_frame = fi
+		for ca in _crowd_anims:
+			ca["mat"].albedo_texture = ca["frames"][fi]
 
 # --- helpers ------------------------------------------------------------------
 
@@ -66,6 +106,7 @@ func _in_water_art(a: Vector2) -> bool:
 func _label(text: String, pos: Vector3, face_dir: Vector3, color: Color, size := 48, px := 0.09) -> Label3D:
 	var lbl := Label3D.new()
 	lbl.text = text
+	lbl.font = Pix.pixel_font()
 	lbl.font_size = size
 	lbl.pixel_size = px
 	lbl.modulate = color
@@ -151,13 +192,19 @@ func _yacht_part(root: Node3D, size: Vector3, pos: Vector3, mat: Material) -> vo
 # --- city ---------------------------------------------------------------------
 
 func _build_city() -> void:
-	var bases := [
-		Color(0.85, 0.78, 0.66), Color(0.82, 0.62, 0.5), Color(0.88, 0.72, 0.7),
-		Color(0.75, 0.72, 0.62), Color(0.7, 0.62, 0.55), Color(0.86, 0.82, 0.74),
-	]
-	var mats: Array[StandardMaterial3D] = []
-	for b in bases:
-		mats.append(Pix.tex_mat(Pix.facade(_rng, b)))
+	# pre-bake a few facade materials per district
+	var mats := {}
+	var awning_mats := {}
+	for d in District.values():
+		var list: Array = []
+		for k in 4:
+			var walls: Array = DISTRICT_WALLS[d]
+			list.append(Pix.tex_mat(Pix.facade(_rng, walls[k % walls.size()], DISTRICT_AWNINGS[d], d != District.CASINO)))
+		mats[d] = list
+		var alist: Array = []
+		for ac in DISTRICT_AWNINGS[d]:
+			alist.append(Pix.tex_mat(Pix.awning(ac)))
+		awning_mats[d] = alist
 	var gx := -130.0
 	while gx < 1060.0:
 		var gy := -130.0
@@ -182,19 +229,67 @@ func _build_city() -> void:
 			# hillside city: building tops must clear nearby elevated roads
 			var ni: int = track.nearest_index_hint(p.x, p.y, 0, 0, track.n - 1)
 			h = maxf(h, track.samples[ni].y + 24.0)
-			var m: StandardMaterial3D = mats[_rng.randi() % mats.size()].duplicate()
-			m.uv1_scale = Vector3(maxf(w / 24.0, 1), maxf(h / 32.0, 1), 1)
-			var yaw := _rng.randf_range(-0.06, 0.06)
+			var dist: float = track.min_dist_to_track(p.x, p.y)
+			var near_track: bool = dist < track.HALF + 75.0
+			var district := _district(a)
+			var dlist: Array = mats[district]
+			var m: StandardMaterial3D = (dlist[_rng.randi() % dlist.size()] as StandardMaterial3D).duplicate()
+			# stretch one facade over the full height so the storefront stays
+			# at street level; tile horizontally per ~24 units
+			m.uv1_scale = Vector3(maxf(roundf(w / 24.0), 1.0), 1.0, 1.0)
+			var yaw := 0.0 if near_track else _rng.randf_range(-0.06, 0.06)
 			var b := _box(Vector3(w, h, d), Vector3(p.x, h * 0.5 - 0.5, p.y), m, yaw)
-			# plain roof slab so rooftops don't show the window texture from above
+			# plain roof slab in the district's roof color
 			var roof := MeshInstance3D.new()
 			var rm := BoxMesh.new()
 			rm.size = Vector3(w + 1.5, 1.2, d + 1.5)
 			roof.mesh = rm
-			roof.material_override = Pix.flat_mat(Color(0.45, 0.42, 0.4).lerp(Color(0.6, 0.5, 0.45), _rng.randf()))
+			var rc: Color = DISTRICT_ROOFS[district]
+			roof.material_override = Pix.flat_mat(rc.lerp(rc.lightened(0.2), _rng.randf()))
 			roof.position = Vector3(0, h * 0.5 + 0.3, 0)
 			b.add_child(roof)
+			if near_track:
+				_building_extras(b, w, h, d, p, awning_mats[district])
 		gx += 38.0
+
+## 3D dressing on the road-facing side of buildings the camera passes close to:
+## a striped awning over the storefront and a few balcony slabs.
+func _building_extras(b: MeshInstance3D, w: float, h: float, d: float, p: Vector2, awnings: Array) -> void:
+	var ni: int = track.nearest_index_hint(p.x, p.y, 0, 0, track.n - 1)
+	var to_road := Vector2(track.samples[ni].x - p.x, track.samples[ni].z - p.y)
+	var base_y := -h * 0.5  # local coords: box is centered
+	var face_x := absf(to_road.x) > absf(to_road.y)
+	var sx := signf(to_road.x)
+	var sz := signf(to_road.y)
+	var am: StandardMaterial3D = awnings[_rng.randi() % awnings.size()]
+	var aw := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	var awning_y := base_y + h / 6.0 + 0.4  # just above the storefront band
+	if face_x:
+		bm.size = Vector3(2.4, 0.8, d * 0.6)
+		aw.position = Vector3(sx * (w * 0.5 + 1.0), awning_y, 0)
+	else:
+		bm.size = Vector3(w * 0.6, 0.8, 2.4)
+		aw.position = Vector3(0, awning_y, sz * (d * 0.5 + 1.0))
+	aw.mesh = bm
+	aw.material_override = am
+	b.add_child(aw)
+	var bal_mat := Pix.flat_mat(Color(0.9, 0.88, 0.84))
+	for k in 2 + _rng.randi() % 2:
+		var by := base_y + h * (10.0 + float(k) * 6.0) / 36.0
+		if by > h * 0.5 - 4.0:
+			break
+		var bal := MeshInstance3D.new()
+		var bb := BoxMesh.new()
+		if face_x:
+			bb.size = Vector3(1.6, 0.6, 5.0)
+			bal.position = Vector3(sx * (w * 0.5 + 0.7), by, _rng.randf_range(-d * 0.25, d * 0.25))
+		else:
+			bb.size = Vector3(5.0, 0.6, 1.6)
+			bal.position = Vector3(_rng.randf_range(-w * 0.25, w * 0.25), by, sz * (d * 0.5 + 0.7))
+		bal.mesh = bb
+		bal.material_override = bal_mat
+		b.add_child(bal)
 
 func _build_casino() -> void:
 	# Crown Casino sits inside the crest hairpin, +12m above the harbor
@@ -206,7 +301,7 @@ func _build_casino() -> void:
 	_box(Vector3(22, 26, 30), base + Vector3(0, 77, 0), cream)  # dome block
 	_box(Vector3(20, 30, 26), base + Vector3(0, 15, -56), cream)
 	_box(Vector3(20, 30, 26), base + Vector3(0, 15, 56), cream)
-	_casino_sign = _label("CROWN CASINO", base + Vector3(-20, 70, 0), Vector3(-1, 0, 0), Color(1.0, 0.84, 0.2), 64, 0.11)
+	_casino_sign = _label("CROWN CASINO", base + Vector3(-20, 70, 0), Vector3(-1, 0, 0), Color(1.0, 0.84, 0.2), 48, 0.09)
 	var glow := Pix.flat_mat(Color(1.0, 0.8, 0.25), 1.8)
 	_box(Vector3(1.5, 4, 34), base + Vector3(-19.5, 56, 0), glow)
 
@@ -223,7 +318,9 @@ func _grandstand(center: Vector3, length: float, yaw: float) -> void:
 	root.rotation.y = yaw
 	add_child(root)
 	var frame := Pix.flat_mat(Color(0.35, 0.37, 0.42))
-	var crowd_mat := Pix.tex_mat(Pix.crowd(_rng))
+	var crowd_textures: Array = Pix.crowd_frames(_rng)
+	var crowd_mat := Pix.tex_mat(crowd_textures[0])
+	_crowd_anims.append({"mat": crowd_mat, "frames": crowd_textures})
 	crowd_mat.uv1_scale = Vector3(length / 40.0, 1, 1)
 	crowd_mat.emission_enabled = true
 	crowd_mat.emission = Color(0.25, 0.25, 0.28)
@@ -348,7 +445,9 @@ func _build_billboards() -> void:
 				_box(Vector3(26, 8, 1.2), pos + Vector3(0, 7, 0), Pix.flat_mat(col), yaw)
 				_box(Vector3(1, 3.5, 1), pos + Vector3(0, 1.75, 0), Pix.flat_mat(Color(0.3, 0.3, 0.33)), 0.0)
 				var face: Vector3 = track.normals[k] * -side
-				_label(sponsor, pos + Vector3(0, 7, 0) + face * 0.8, face, Color(0.95, 0.95, 0.95), 36, 0.085)
+				# pixel font is square: shrink long sponsor names to fit the board
+				var ps := minf(0.09, 24.0 / (float(sponsor.length()) * 32.0))
+				_label(sponsor, pos + Vector3(0, 7, 0) + face * 0.8, face, Color(0.95, 0.95, 0.95), 32, ps)
 				count += 1
 			k += 16
 	# tire barrier stacks at a few corner apexes for street-circuit flavor
