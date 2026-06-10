@@ -174,8 +174,8 @@ static func ground(rng: RandomNumberGenerator) -> ImageTexture:
 	var img := Image.create(24, 24, false, Image.FORMAT_RGBA8)
 	for y in 24:
 		for x in 24:
-			var v := 0.41 + rng.randf() * 0.045
-			img.set_pixel(x, y, Color(v, v * 0.95, v * 0.86))
+			var v := 0.4 + rng.randf() * 0.045
+			img.set_pixel(x, y, Color(v, v * 0.92, v * 0.78))
 	return _tex(img)
 
 static func water_material() -> ShaderMaterial:
@@ -183,8 +183,8 @@ static func water_material() -> ShaderMaterial:
 	sh.code = """
 shader_type spatial;
 render_mode specular_disabled;
-uniform vec3 deep : source_color = vec3(0.04, 0.22, 0.5);
-uniform vec3 lite : source_color = vec3(0.35, 0.68, 0.95);
+uniform vec3 deep : source_color = vec3(0.03, 0.17, 0.44);
+uniform vec3 lite : source_color = vec3(0.28, 0.6, 0.92);
 varying vec2 wpos;
 void vertex() { wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz; }
 void fragment() {
@@ -193,8 +193,11 @@ void fragment() {
 	float w2 = sin(g.y * 0.55 - TIME * 1.1 + g.x * 0.2);
 	float band = step(1.25, w1 + w2);
 	float swell = step(0.6, sin(g.x * 0.13 - TIME * 0.5 + g.y * 0.21));
-	vec3 col = mix(deep, deep * 1.3, swell * 0.8);
+	vec3 col = mix(deep, deep * 1.35, swell * 0.8);
 	col = mix(col, lite, band * 0.85);
+	// sun glints
+	float sp = step(0.992, fract(sin(dot(g, vec2(12.9898, 78.233)) + floor(TIME * 2.0)) * 43758.5453));
+	col = mix(col, vec3(0.95, 0.98, 1.0), sp);
 	ALBEDO = col;
 	ROUGHNESS = 0.35;
 }

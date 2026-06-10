@@ -26,11 +26,13 @@ const DISTRICT_AWNINGS := {
 	District.CASINO: [Color(0.7, 0.5, 0.15), Color(0.45, 0.12, 0.2)],
 	District.CENTER: [Color(0.3, 0.35, 0.5), Color(0.55, 0.25, 0.25)],
 }
+## Terracotta dominates, like the concept art; the casino quarter gets
+## oxidized-copper green landmarks.
 const DISTRICT_ROOFS := {
-	District.OLD_TOWN: Color(0.62, 0.36, 0.25),
-	District.HARBOR: Color(0.5, 0.55, 0.6),
-	District.CASINO: Color(0.7, 0.66, 0.58),
-	District.CENTER: Color(0.48, 0.45, 0.42),
+	District.OLD_TOWN: Color(0.68, 0.36, 0.22),
+	District.HARBOR: Color(0.72, 0.4, 0.26),
+	District.CASINO: Color(0.42, 0.58, 0.48),
+	District.CENTER: Color(0.66, 0.38, 0.24),
 }
 
 func _district(a: Vector2) -> int:
@@ -49,6 +51,7 @@ var _sea_yachts: Array[Node3D] = []
 var _casino_sign: Label3D
 var _crowd_anims: Array = []  # {"mat": StandardMaterial3D, "frames": [Texture2D, Texture2D]}
 var _crowd_frame := 0
+var _building_rects: Array[Rect2] = []  # art-space footprints, for tree placement
 
 func build(p_track) -> void:
 	track = p_track
@@ -56,9 +59,12 @@ func build(p_track) -> void:
 	_build_ground_and_water()
 	_build_marina()
 	_build_city()
+	_build_trees()
 	_build_casino()
 	_build_grandstands()
+	_build_trackside_crowds()
 	_build_palms()
+	_build_umbrellas()
 	_build_billboards()
 	_build_streetlights()
 	_build_pit_lane()
@@ -155,13 +161,19 @@ func _build_marina() -> void:
 	var wood := Pix.flat_mat(Color(0.55, 0.4, 0.25))
 	for px in [250.0, 350.0, 450.0, 560.0]:
 		_box(Vector3(6, 1, 80), Vector3(px * 2, -3.2, MARINA.position.y * 2 + 44), wood)
-	for k in 11:
-		var ax := _rng.randf_range(MARINA.position.x + 25, MARINA.end.x - 25)
-		var ay := _rng.randf_range(MARINA.position.y + 14, MARINA.end.y - 14)
-		_yacht(Vector2(ax, ay) * 2.0, _rng.randf_range(0, TAU), _rng.randf_range(0.7, 1.4), false)
-	for k in 3:
-		var y := _yacht(Vector2(_rng.randf_range(200, 1500), _rng.randf_range(1620, 1760)), 0.0, _rng.randf_range(1.2, 2.0), true)
+	for k in 19:
+		var ax := _rng.randf_range(MARINA.position.x + 22, MARINA.end.x - 22)
+		var ay := _rng.randf_range(MARINA.position.y + 12, MARINA.end.y - 12)
+		_yacht(Vector2(ax, ay) * 2.0, _rng.randf_range(0, TAU), _rng.randf_range(0.6, 1.4), false)
+	for k in 6:
+		var y := _yacht(Vector2(_rng.randf_range(100, 1700), _rng.randf_range(1600, 1860)), 0.0, _rng.randf_range(1.0, 2.0), true)
 		_sea_yachts.append(y)
+	# harbor buoys
+	var buoy_mat := Pix.flat_mat(Color(0.95, 0.4, 0.1), 0.4)
+	for k in 8:
+		var bx := _rng.randf_range(MARINA.position.x + 20, MARINA.end.x - 20) * 2.0
+		var bz := _rng.randf_range(MARINA.position.y + 10, MARINA.end.y - 10) * 2.0
+		_box(Vector3(1.6, 1.6, 1.6), Vector3(bx, -3.4, bz), buoy_mat)
 
 func _yacht(world_xz: Vector2, yaw: float, s: float, drifting: bool) -> Node3D:
 	var root := Node3D.new()
@@ -209,8 +221,8 @@ func _build_city() -> void:
 	while gx < 1060.0:
 		var gy := -130.0
 		while gy < 760.0:
-			gy += 38.0
-			if _rng.randf() < 0.3:
+			gy += 34.0
+			if _rng.randf() < 0.24:
 				continue
 			var ax := gx + _rng.randf_range(-8, 8)
 			var ay := gy + _rng.randf_range(-8, 8)
@@ -239,18 +251,161 @@ func _build_city() -> void:
 			m.uv1_scale = Vector3(maxf(roundf(w / 24.0), 1.0), 1.0, 1.0)
 			var yaw := 0.0 if near_track else _rng.randf_range(-0.06, 0.06)
 			var b := _box(Vector3(w, h, d), Vector3(p.x, h * 0.5 - 0.5, p.y), m, yaw)
-			# plain roof slab in the district's roof color
+			_building_rects.append(Rect2(ax - w * 0.25, ay - d * 0.25, w * 0.5, d * 0.5))
+			# tiered "pitched" roof in the district's roof color
+			var rc: Color = DISTRICT_ROOFS[district]
+			var roof_mat := Pix.flat_mat(rc.lerp(rc.lightened(0.18), _rng.randf()))
 			var roof := MeshInstance3D.new()
 			var rm := BoxMesh.new()
 			rm.size = Vector3(w + 1.5, 1.2, d + 1.5)
 			roof.mesh = rm
-			var rc: Color = DISTRICT_ROOFS[district]
-			roof.material_override = Pix.flat_mat(rc.lerp(rc.lightened(0.2), _rng.randf()))
+			roof.material_override = roof_mat
 			roof.position = Vector3(0, h * 0.5 + 0.3, 0)
 			b.add_child(roof)
+			var ridge := MeshInstance3D.new()
+			var rg := BoxMesh.new()
+			rg.size = Vector3(w * 0.68, 1.4, d * 0.68)
+			ridge.mesh = rg
+			ridge.material_override = roof_mat
+			ridge.position = Vector3(0, h * 0.5 + 1.4, 0)
+			b.add_child(ridge)
+			if _rng.randf() < 0.55:
+				var chimney := MeshInstance3D.new()
+				var cm := BoxMesh.new()
+				cm.size = Vector3(2, 3, 2)
+				chimney.mesh = cm
+				chimney.material_override = Pix.flat_mat(Color(0.5, 0.34, 0.26))
+				chimney.position = Vector3(_rng.randf_range(-w * 0.3, w * 0.3), h * 0.5 + 2.0, _rng.randf_range(-d * 0.3, d * 0.3))
+				b.add_child(chimney)
 			if near_track:
 				_building_extras(b, w, h, d, p, awning_mats[district])
-		gx += 38.0
+		gx += 34.0
+
+## Lush tree cover wherever there's no water, road, or building — the concept
+## art has essentially zero bare ground.
+func _build_trees() -> void:
+	var greens := [Color(0.22, 0.48, 0.26), Color(0.3, 0.56, 0.3), Color(0.18, 0.42, 0.23), Color(0.42, 0.52, 0.22)]
+	var crown_mats: Array = []
+	for g in greens:
+		crown_mats.append(Pix.flat_mat(g))
+	var trunk_mat := Pix.flat_mat(Color(0.42, 0.3, 0.2))
+	var ax := -150.0
+	while ax < 1080.0:
+		var ay := -150.0
+		while ay < 768.0:
+			ay += 24.0
+			if _rng.randf() < 0.7:
+				continue
+			var a := Vector2(ax + _rng.randf_range(-8, 8), ay + _rng.randf_range(-8, 8))
+			if _in_water_art(a):
+				continue
+			if a.x > 195.0 and a.x < 460.0 and a.y > 580.0 and a.y < 655.0:
+				continue  # pit corridor
+			var p := _w(a.x, a.y)
+			if track.min_dist_to_track(p.x, p.y) < track.HALF + 9.0:
+				continue
+			var blocked := false
+			for r in _building_rects:
+				if r.grow(3.0).has_point(a):
+					blocked = true
+					break
+			if blocked:
+				continue
+			_tree(Vector3(p.x, 0, p.y), _rng.randf_range(0.7, 1.5), trunk_mat, crown_mats[_rng.randi() % crown_mats.size()])
+		ax += 24.0
+
+func _tree(pos: Vector3, s: float, trunk_mat: Material, crown_mat: Material) -> void:
+	var trunk := _box(Vector3(1.2 * s, 3.0 * s, 1.2 * s), pos + Vector3(0, 1.5 * s, 0), trunk_mat)
+	var crown := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 4.2 * s
+	sm.height = 5.8 * s
+	sm.radial_segments = 7
+	sm.rings = 4
+	crown.mesh = sm
+	crown.material_override = crown_mat
+	crown.position = Vector3(0, 4.6 * s, 0)
+	trunk.add_child(crown)
+
+## Crowd strips along the outside barriers at corners — race-day atmosphere
+## beyond the three big grandstands.
+func _build_trackside_crowds() -> void:
+	var frames: Array = Pix.crowd_frames(_rng)
+	var mat := Pix.tex_mat(frames[0])
+	mat.uv1_scale = Vector3(2.4, 1, 1)
+	mat.emission_enabled = true
+	mat.emission = Color(0.25, 0.25, 0.28)
+	mat.emission_energy_multiplier = 0.3
+	_crowd_anims.append({"mat": mat, "frames": frames})
+	var stand_mat := Pix.flat_mat(Color(0.3, 0.32, 0.36))
+	for c in track.corners:
+		var i: int = c["index"]
+		if track.in_tunnel(i):
+			continue
+		var side: float = -track.curv_sign[i]
+		var pos: Vector3 = track.samples[i] + track.normals[i] * (track.HALF + 9.5) * side
+		var a: Vector2 = track.art[i] + Vector2(track.normals[i].x, track.normals[i].z) * (track.HALF + 9.5) * side / 2.0
+		if _in_water_art(a):
+			continue
+		if track.min_dist_to_track(pos.x, pos.z) < track.HALF + 5.0:
+			continue
+		var t: Vector3 = track.tangents[i]
+		var root := Node3D.new()
+		root.position = pos
+		root.rotation.y = -atan2(t.z, t.x)
+		add_child(root)
+		var stand := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(26, 2.6, 3.5)
+		stand.mesh = bm
+		stand.material_override = stand_mat
+		stand.position = Vector3(0, 1.3, 0)
+		root.add_child(stand)
+		var crowd := MeshInstance3D.new()
+		var qm := QuadMesh.new()
+		qm.size = Vector2(26, 2.4)
+		crowd.mesh = qm
+		crowd.material_override = mat
+		crowd.position = Vector3(0, 2.6, 0)
+		crowd.rotation.x = -0.2
+		# quad faces local +Z; the road is on the -side of the offset normal
+		crowd.rotation.y = 0.0 if side > 0.0 else PI
+		root.add_child(crowd)
+
+## Cafe umbrellas: marina promenade and scattered park spots.
+func _build_umbrellas() -> void:
+	var colors := [Color(0.85, 0.25, 0.2), Color(0.95, 0.9, 0.82), Color(0.2, 0.5, 0.65), Color(0.9, 0.6, 0.2)]
+	var spots: Array[Vector2] = []
+	var ax := 262.0
+	while ax < 700.0:
+		spots.append(Vector2(ax, 644.0))
+		ax += 52.0
+	for k in 16:
+		spots.append(Vector2(_rng.randf_range(120, 880), _rng.randf_range(120, 740)))
+	for a in spots:
+		if _in_water_art(a):
+			continue
+		var p := _w(a.x, a.y)
+		if track.min_dist_to_track(p.x, p.y) < track.HALF + 11.0:
+			continue
+		var blocked := false
+		for r in _building_rects:
+			if r.grow(2.0).has_point(a):
+				blocked = true
+				break
+		if blocked:
+			continue
+		var pole := _box(Vector3(0.5, 4, 0.5), Vector3(p.x, 2, p.y), Pix.flat_mat(Color(0.75, 0.72, 0.68)))
+		var canopy := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = 0.3
+		cm.bottom_radius = 3.4
+		cm.height = 1.6
+		cm.radial_segments = 8
+		canopy.mesh = cm
+		canopy.material_override = Pix.flat_mat(colors[_rng.randi() % colors.size()])
+		canopy.position = Vector3(0, 2.2, 0)
+		pole.add_child(canopy)
 
 ## 3D dressing on the road-facing side of buildings the camera passes close to:
 ## a striped awning over the storefront and a few balcony slabs.

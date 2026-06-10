@@ -115,7 +115,7 @@ func _palette_material() -> ShaderMaterial:
 	sh.code = """
 shader_type canvas_item;
 uniform float levels = 7.0;
-uniform float saturation = 1.12;
+uniform float saturation = 1.2;
 void fragment() {
 	vec4 c = texture(TEXTURE, UV);
 	float g = dot(c.rgb, vec3(0.299, 0.587, 0.114));
@@ -152,8 +152,8 @@ func _setup_environment(world: Node3D) -> void:
 	world.add_child(we)
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-52, 35, 0)
-	sun.light_energy = 1.0
-	sun.light_color = Color(1.0, 0.95, 0.85)
+	sun.light_energy = 1.05
+	sun.light_color = Color(1.0, 0.92, 0.78)
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 900.0
 	world.add_child(sun)

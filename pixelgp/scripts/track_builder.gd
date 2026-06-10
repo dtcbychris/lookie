@@ -197,15 +197,37 @@ func _build_tunnel() -> void:
 			_wall(run_start, run, -track.HALF - 3.2, 5.5, 14.0, wall_mat)
 			# cutaway roof ribs instead of a solid slab, so the top-down camera
 			# never fully loses the car inside the tunnel
+			# thin pergola beams: read as "covered section" from above without
+			# occluding the car. Sized and spaced by DISTANCE, not samples —
+			# samples sit ~24 units apart on this straight (14 per control
+			# segment), so sample-count geometry comes out 4x too large here.
+			var d_acc := 99.0
 			var k := run_start
 			while k < run_start + run:
-				if (k - run_start) % 10 == 0:
-					# elevated ribs cast huge hard shadows across the road
-					# that read as glitches from the race camera — disable
-					var rib := _ribbon(k, mini(4, run_start + run - k), track.HALF + 4.5, -track.HALF - 4.5, 14.0, roof_mat)
-					rib.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-					var lamp := _ribbon(k, mini(2, run_start + run - k), 1.2, -1.2, 13.4, light_mat)
+				d_acc += track.step_len[k % track.n]
+				if d_acc >= 26.0:
+					d_acc = 0.0
+					var p: Vector3 = track.samples[k % track.n]
+					var t: Vector3 = track.tangents[k % track.n]
+					var yaw := -atan2(t.z, t.x)
+					var beam := MeshInstance3D.new()
+					var bb := BoxMesh.new()
+					bb.size = Vector3(3.0, 0.8, (track.HALF + 4.5) * 2.0)
+					beam.mesh = bb
+					beam.material_override = roof_mat
+					beam.position = p + Vector3(0, 14.0, 0)
+					beam.rotation.y = yaw
+					beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+					add_child(beam)
+					var lamp := MeshInstance3D.new()
+					var lb := BoxMesh.new()
+					lb.size = Vector3(2.0, 0.5, 2.4)
+					lamp.mesh = lb
+					lamp.material_override = light_mat
+					lamp.position = p + Vector3(0, 13.3, 0)
+					lamp.rotation.y = yaw
 					lamp.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+					add_child(lamp)
 				k += 1
 			_portal(run_start)
 			_portal(run_start + run)
@@ -219,7 +241,9 @@ func _portal(i: int) -> void:
 	var bm := BoxMesh.new()
 	bm.size = Vector3(4, 4.5, (track.HALF + 5.0) * 2.0)
 	arch.mesh = bm
-	arch.material_override = Pix.flat_mat(Color(0.5, 0.48, 0.45))
+	# slight self-illumination: the sun-away face otherwise renders as a
+	# near-black slab floating over the road
+	arch.material_override = Pix.flat_mat(Color(0.78, 0.72, 0.62), 0.35)
 	arch.position = p + Vector3(0, 14.0, 0)
 	arch.rotation.y = -atan2(t.z, t.x)
 	arch.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
