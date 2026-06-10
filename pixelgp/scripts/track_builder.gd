@@ -59,7 +59,14 @@ func _ribbon(i_from: int, seg_count: int, lat_l: float, lat_r: float, y_off: flo
 		st.set_uv(Vector2(1, v)); st.add_vertex(r0)
 		st.set_uv(Vector2(1, v1)); st.add_vertex(r1)
 		v = v1
-	st.set_material(mat)
+	# render double-sided: ribbon winding gets back-face culled from some
+	# camera angles ("see-through road" playtest bug); the walls already do
+	# this, and undersides are never visible anyway
+	var m2 := mat
+	if m2 is StandardMaterial3D:
+		m2 = (mat as StandardMaterial3D).duplicate()
+		m2.cull_mode = BaseMaterial3D.CULL_DISABLED
+	st.set_material(m2)
 	var mi := MeshInstance3D.new()
 	mi.mesh = st.commit()
 	add_child(mi)

@@ -7,9 +7,9 @@ const MainScene = preload("res://scenes/harbor_crown_circuit.tscn")
 
 # [tag, camera position, look target]
 const POSES := [
-	["casino", Vector3(1500, 220, 600), Vector3(1640, 48, 330)],
-	["marina", Vector3(900, 260, 1620), Vector3(880, -4, 1320)],
-	["tunnel_portal", Vector3(540, 18, 1620), Vector3(700, -4, 1500)],
+	["esses_side", Vector3(1420, 70, 1050), Vector3(1660, 30, 870)],
+	["esses_low", Vector3(1560, 45, 1080), Vector3(1655, 32, 900)],
+	["esses_top", Vector3(1650, 320, 1000), Vector3(1655, 30, 880)],
 ]
 
 var f := 0
