@@ -87,6 +87,22 @@ sponsor canon. Everything else is generated from it at load:
 
 Units: 1 Godot unit = 1 "world px" (art px × 2), matching `proven_tuning`.
 
+## Texture override pipeline (the art upgrade path)
+
+Every texture is requested by name through `pixel_textures.named_tex()`:
+if `assets/textures/<name>.png` exists it is used; otherwise a procedural
+generator is the fallback. **To upgrade any texture, drop a PNG with the
+same name into `assets/textures/` — no code changes.** Current names:
+`asphalt`, `ground`, `curb`, `barrier`, `checker`, and
+`facade_<district>_<0-3>` for districts `oldtown/harbor/casino/center`.
+
+The current authored set is written by a recipe tool (re-run after
+changing recipes — it overwrites the PNGs):
+
+```bash
+godot --headless --path pixelgp --script res://tests/author_textures.gd
+```
+
 ## Known limitations (first playable)
 
 - Pit lane is decorative (entry/exit gaps in the barrier + painted boxes);

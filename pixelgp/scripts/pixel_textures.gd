@@ -6,6 +6,23 @@ extends RefCounted
 static func _tex(img: Image) -> ImageTexture:
 	return ImageTexture.create_from_image(img)
 
+static var _named_cache := {}
+
+## Texture override pipeline: if assets/textures/<name>.png exists it wins;
+## otherwise the procedural generator is the fallback. This is the seam where
+## hand-painted art replaces generated art without touching any code.
+static func named_tex(name: String, gen: Callable) -> Texture2D:
+	if _named_cache.has(name):
+		return _named_cache[name]
+	var path := "res://assets/textures/%s.png" % name
+	var t: Texture2D
+	if ResourceLoader.exists(path):
+		t = load(path)
+	else:
+		t = _tex(gen.call())
+	_named_cache[name] = t
+	return t
+
 static var _font: FontFile
 
 ## Press Start 2P (OFL) configured for crisp integer-pixel rendering.
@@ -40,7 +57,10 @@ static func flat_mat(color: Color, emission := 0.0) -> StandardMaterial3D:
 		m.emission_energy_multiplier = emission
 	return m
 
-static func asphalt() -> ImageTexture:
+static func asphalt() -> Texture2D:
+	return named_tex("asphalt", _asphalt_img)
+
+static func _asphalt_img() -> Image:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 11
 	var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
@@ -50,25 +70,34 @@ static func asphalt() -> ImageTexture:
 			if rng.randf() < 0.04:
 				v += 0.035
 			img.set_pixel(x, y, Color(v, v, v * 1.12))
-	return _tex(img)
+	return img
 
-static func checker() -> ImageTexture:
+static func checker() -> Texture2D:
+	return named_tex("checker", _checker_img)
+
+static func _checker_img() -> Image:
 	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
 	for y in 8:
 		for x in 8:
 			var on := (x / 2 + y / 2) % 2 == 0
 			img.set_pixel(x, y, Color(0.92, 0.92, 0.92) if on else Color(0.06, 0.06, 0.07))
-	return _tex(img)
+	return img
 
-static func curb() -> ImageTexture:
+static func curb() -> Texture2D:
+	return named_tex("curb", _curb_img)
+
+static func _curb_img() -> Image:
 	# stripes across v (texture tiles along track length)
 	var img := Image.create(4, 8, false, Image.FORMAT_RGBA8)
 	for y in 8:
 		for x in 4:
 			img.set_pixel(x, y, Color(0.85, 0.12, 0.1) if y < 4 else Color(0.93, 0.9, 0.86))
-	return _tex(img)
+	return img
 
-static func barrier() -> ImageTexture:
+static func barrier() -> Texture2D:
+	return named_tex("barrier", _barrier_img)
+
+static func _barrier_img() -> Image:
 	var img := Image.create(16, 8, false, Image.FORMAT_RGBA8)
 	for y in 8:
 		for x in 16:
@@ -78,13 +107,22 @@ static func barrier() -> ImageTexture:
 			if x % 8 == 0:
 				c = c.darkened(0.25)
 			img.set_pixel(x, y, c)
-	return _tex(img)
+	return img
+
+const DISTRICT_NAMES := ["oldtown", "harbor", "casino", "center"]
+
+static func facade_named(district: int, idx: int, base: Color, awnings: Array, balconies: bool) -> Texture2D:
+	var fname := "facade_%s_%d" % [DISTRICT_NAMES[district], idx]
+	return named_tex(fname, func() -> Image:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(fname)
+		return _facade_img(rng, base, awnings, balconies))
 
 ## Painted Riviera facade: cornice, window grid with lit/unlit glass, striped
 ## awnings over windows, balcony railings, ground-floor storefront with door.
 ## One texture stretches the full building height (no vertical tiling, so the
 ## storefront stays at street level).
-static func facade(rng: RandomNumberGenerator, base: Color, awnings: Array, balconies: bool) -> ImageTexture:
+static func _facade_img(rng: RandomNumberGenerator, base: Color, awnings: Array, balconies: bool) -> Image:
 	var w := 24
 	var h := 36
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
@@ -130,7 +168,7 @@ static func facade(rng: RandomNumberGenerator, base: Color, awnings: Array, balc
 			img.set_pixel(x, h - 7, ac2 if (x / 2) % 2 == 0 else Color(0.93, 0.92, 0.88))
 	for x in w:
 		img.set_pixel(x, h - 1, base.darkened(0.45))
-	return _tex(img)
+	return img
 
 static func awning(c: Color) -> ImageTexture:
 	var img := Image.create(8, 4, false, Image.FORMAT_RGBA8)
@@ -170,13 +208,18 @@ static func crowd_frames(rng: RandomNumberGenerator) -> Array:
 		frames.append(_tex(img))
 	return frames
 
-static func ground(rng: RandomNumberGenerator) -> ImageTexture:
+static func ground() -> Texture2D:
+	return named_tex("ground", _ground_img)
+
+static func _ground_img() -> Image:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 13
 	var img := Image.create(24, 24, false, Image.FORMAT_RGBA8)
 	for y in 24:
 		for x in 24:
 			var v := 0.4 + rng.randf() * 0.045
 			img.set_pixel(x, y, Color(v, v * 0.92, v * 0.78))
-	return _tex(img)
+	return img
 
 static func water_material() -> ShaderMaterial:
 	var sh := Shader.new()

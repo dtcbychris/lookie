@@ -130,7 +130,7 @@ func _ground_piece(r: Rect2, mat: Material) -> void:
 	_box(Vector3(size.x, 1.0, size.y), Vector3(center.x, -1.1, center.y), mat)
 
 func _build_ground_and_water() -> void:
-	var gmat := Pix.tex_mat(Pix.ground(_rng))
+	var gmat := Pix.tex_mat(Pix.ground())
 	gmat.uv1_scale = Vector3(40, 40, 1)
 	_ground_piece(Rect2(-160, -160, 1260, 812), gmat)   # main land mass (north of marina)
 	_ground_piece(Rect2(-160, 732, 1260, 40), gmat)     # harbor-front causeway strip
@@ -211,7 +211,7 @@ func _build_city() -> void:
 		var list: Array = []
 		for k in 4:
 			var walls: Array = DISTRICT_WALLS[d]
-			list.append(Pix.tex_mat(Pix.facade(_rng, walls[k % walls.size()], DISTRICT_AWNINGS[d], d != District.CASINO)))
+			list.append(Pix.tex_mat(Pix.facade_named(d, k, walls[k % walls.size()], DISTRICT_AWNINGS[d], d != District.CASINO)))
 		mats[d] = list
 		var alist: Array = []
 		for ac in DISTRICT_AWNINGS[d]:
@@ -247,8 +247,8 @@ func _build_city() -> void:
 			var dlist: Array = mats[district]
 			var m: StandardMaterial3D = (dlist[_rng.randi() % dlist.size()] as StandardMaterial3D).duplicate()
 			# stretch one facade over the full height so the storefront stays
-			# at street level; tile horizontally per ~24 units
-			m.uv1_scale = Vector3(maxf(roundf(w / 24.0), 1.0), 1.0, 1.0)
+			# at street level; tile horizontally per ~28 units (32px texture)
+			m.uv1_scale = Vector3(maxf(roundf(w / 28.0), 1.0), 1.0, 1.0)
 			var yaw := 0.0 if near_track else _rng.randf_range(-0.06, 0.06)
 			var b := _box(Vector3(w, h, d), Vector3(p.x, h * 0.5 - 0.5, p.y), m, yaw)
 			_building_rects.append(Rect2(ax - w * 0.25, ay - d * 0.25, w * 0.5, d * 0.5))
@@ -419,7 +419,7 @@ func _building_extras(b: MeshInstance3D, w: float, h: float, d: float, p: Vector
 	var am: StandardMaterial3D = awnings[_rng.randi() % awnings.size()]
 	var aw := MeshInstance3D.new()
 	var bm := BoxMesh.new()
-	var awning_y := base_y + h / 6.0 + 0.4  # just above the storefront band
+	var awning_y := base_y + h / 4.0 + 0.4  # just above the storefront band (bottom 12/48 of the facade)
 	if face_x:
 		bm.size = Vector3(2.4, 0.8, d * 0.6)
 		aw.position = Vector3(sx * (w * 0.5 + 1.0), awning_y, 0)
@@ -431,7 +431,7 @@ func _building_extras(b: MeshInstance3D, w: float, h: float, d: float, p: Vector
 	b.add_child(aw)
 	var bal_mat := Pix.flat_mat(Color(0.9, 0.88, 0.84))
 	for k in 2 + _rng.randi() % 2:
-		var by := base_y + h * (10.0 + float(k) * 6.0) / 36.0
+		var by := base_y + h * (15.0 + float(k) * 8.0) / 48.0
 		if by > h * 0.5 - 4.0:
 			break
 		var bal := MeshInstance3D.new()
