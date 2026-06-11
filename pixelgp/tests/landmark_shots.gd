@@ -8,10 +8,8 @@ const MainScene = preload("res://scenes/harbor_crown_circuit.tscn")
 # [tag, camera position, look target]
 const POSES := [
 	["hotel_grid", Vector3(690, 110, 1330), Vector3(690, 25, 1080)],
-	["helipad", Vector3(1610, 130, 1680), Vector3(1728, 2, 1490)],
-	["harbor_crane", Vector3(520, 90, 1545), Vector3(380, 8, 1400)],
-	["statue", Vector3(580, 175, 1140), Vector3(524, 6, 960)],
-	["tv_crane", Vector3(1270, 185, 830), Vector3(1400, 12, 604)],
+	["pit_lane", Vector3(660, 130, 1370), Vector3(650, 1, 1195)],
+	["quayside_cut", Vector3(290, 140, 1560), Vector3(395, 1, 1370)],
 	["casino", Vector3(1500, 220, 600), Vector3(1640, 48, 330)],
 ]
 
@@ -22,6 +20,10 @@ func _ready() -> void:
 	var main := MainScene.instantiate()
 	add_child(main)
 	await get_tree().process_frame
+	# skip the menu so the title card doesn't cover landmark shots
+	var race := main.get_node("RaceManager")
+	race.state = 1  # State.COUNTDOWN
+	race.race_time = -3.5
 	var world := main.find_child("World", true, false)
 	cam = Camera3D.new()
 	cam.fov = 40

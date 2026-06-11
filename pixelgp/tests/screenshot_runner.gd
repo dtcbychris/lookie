@@ -23,27 +23,34 @@ func _ready() -> void:
 func _process(_dt: float) -> void:
 	f += 1
 	match f:
-		260:
+		120:
+			_shot("00_menu")
+		130:
+			# leave the menu (State.COUNTDOWN = 1) like a player pressing Enter
+			var race := main.get_node("RaceManager")
+			race.state = 1
+			race.race_time = -3.5
+		410:
 			_shot("01_start")
-		820:
+		970:
 			_shot("02_tunnel_approach")
-		950:
+		1100:
 			_shot("03_tunnel")
-		1750:
+		1900:
 			_shot("04_esses_climb")
-		2000:
-			_set_camera_mode(1)
 		2150:
+			_set_camera_mode(1)
+		2300:
 			_shot("05_showcase_cam")
 			_set_camera_mode(0)
-		2250:
-			_overview(true)
 		2400:
+			_overview(true)
+		2550:
 			_shot("06_overview")
 			_overview(false)
-		3400:
+		3550:
 			_shot("07_late_race")
-		3500:
+		3650:
 			get_tree().quit()
 
 func _set_camera_mode(m: int) -> void:

@@ -70,5 +70,49 @@ func _initialize() -> void:
 	if not (track.corners.size() >= 12 and track.corners.size() <= 19):
 		print("  FAIL: corner count %d outside 12-19" % track.corners.size())
 		ok = false
+	if not _branch_check(track):
+		ok = false
 	print("RESULT: %s" % ("PASS" if ok else "FAIL"))
 	quit(0 if ok else 1)
+
+## Drive a scripted car through each branch corridor (pit / hidden) and
+## assert: it exits back onto the main line, the speed cap holds, and the
+## pit refills boost.
+func _branch_check(track) -> bool:
+	var ok := true
+	for b in track.branches:
+		var c := CarPhysics.new()
+		c.setup(track, 0)
+		var d0: Vector3 = b["seg_dir"][0]
+		c.pos = b["pts"][0] + Vector3(0, 0, 0)
+		c.heading = atan2(d0.z, d0.x)
+		c.move_dir = c.heading
+		c.speed = 120.0
+		c.boost = 0.1
+		c.idx = b["entry_idx"]
+		c.prev_idx = c.idx
+		c.branch = b
+		c.branch_seg = 0
+		var t := 0.0
+		var vmax_seen := 0.0
+		while c.branch != null and t < 20.0:
+			var pts: PackedVector3Array = b["pts"]
+			var aim: Vector3 = pts[mini(c.branch_seg + 1, pts.size() - 1)]
+			var desired := atan2(aim.z - c.pos.z, aim.x - c.pos.x)
+			var steer := clampf(wrapf(desired - c.heading, -PI, PI) * 4.0, -1.0, 1.0)
+			c.step(DT, t, {"throttle": 1.0, "steer": steer})
+			if t > 0.6:  # ignore the deliberate hot entry while the limiter bites
+				vmax_seen = maxf(vmax_seen, c.speed)
+			t += DT
+		var exited := c.branch == null
+		var idx_err: int = absi(track.wrap_index_diff(c.idx, b["exit_idx"]))
+		print("branch %-14s exited=%s in %4.1fs  vmax=%5.1f (cap %d)  idx_err=%d%s" % [
+			b["name"], str(exited), t, vmax_seen, int(b["cap"]),
+			idx_err, "  boost_refilled" if c.boost > 0.95 else ""])
+		if not exited or idx_err > 4 or vmax_seen > float(b["cap"]) + 18.0:
+			print("  FAIL: branch %s misbehaved" % b["name"])
+			ok = false
+		if b["type"] == "pit" and c.boost < 0.95:
+			print("  FAIL: pit did not refill boost")
+			ok = false
+	return ok

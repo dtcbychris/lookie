@@ -5,14 +5,14 @@ extends Node
 
 const CarPhysics = preload("res://scripts/car_physics.gd")
 
-enum State { COUNTDOWN, RACING, FINISHED }
+enum State { MENU, COUNTDOWN, RACING, FINISHED }
 
 var track  # TrackData
 var cars: Array = []      # CarPhysics, index-aligned with nodes/drivers
 var nodes: Array = []     # CarNode visuals
 var drivers: Array = []   # AIDriver or null for the player
 var player_index := 3
-var state := State.COUNTDOWN
+var state := State.MENU
 var race_time := -3.6
 var positions: Array = []  # car indices, best first
 var player_finish_pos := 0
@@ -20,6 +20,16 @@ var _brake_ramp := 0.0
 
 func _physics_process(dt: float) -> void:
 	if Input.is_action_just_pressed("restart"):
+		get_tree().reload_current_scene()
+		return
+	if state == State.MENU:
+		# weekend flow: attract mode until the player starts the race
+		if Input.is_action_just_pressed("ui_accept"):
+			state = State.COUNTDOWN
+			race_time = -3.6
+		_update_positions()
+		return
+	if state == State.FINISHED and Input.is_action_just_pressed("ui_accept"):
 		get_tree().reload_current_scene()
 		return
 	race_time += dt
@@ -49,11 +59,23 @@ func _player_input() -> Dictionary:
 		_brake_ramp = minf(_brake_ramp + get_physics_process_delta_time() / 0.35, 1.0)
 	else:
 		_brake_ramp = 0.0
+	# slipstream: same +9% the AI has had all along, now for the player too
+	var pc = cars[player_index]
+	var slip := false
+	for o in cars:
+		if o == pc:
+			continue
+		var ahead: int = track.wrap_index_diff(o.idx, pc.idx)
+		if ahead > 0 and Vector2(o.pos.x - pc.pos.x, o.pos.z - pc.pos.z).length() < 55.0:
+			slip = true
+			break
 	return {
 		"throttle": Input.get_action_strength("throttle"),
 		"brake": _brake_ramp,
 		"steer": Input.get_action_strength("steer_right") - Input.get_action_strength("steer_left"),
 		"boost": Input.is_action_pressed("boost"),
+		"vmax_scale": 1.09 if slip else 1.0,
+		"branches": true,  # only the player may take pit lane / hidden paths
 	}
 
 func _update_positions() -> void:

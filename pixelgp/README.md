@@ -16,6 +16,21 @@ with nearest filtering.
    The main scene `scenes/harbor_crown_circuit.tscn` starts a 3-lap race:
    you (RED FALCON) start P4 behind three AI cars.
 
+### Race weekend
+
+The game boots to a title menu over an attract camera; **Enter** starts the
+race. Results show the full classification; Enter or R returns to the menu.
+
+- **Pit lane** (right of the main straight, marked PIT IN): speed-limited to
+  ~100 km/h, refills your boost to 100%. Costs about 2-3s versus staying flat
+  out — worth it if your boost is empty.
+- **Slipstream**: tuck in behind any car within ~55 units for +9% top speed;
+  the HUD shows << SLIPSTREAM >> when it's working. The AI has always had
+  this — now you do too.
+- **Rumor**: locals say there's a service alley somewhere on the west
+  promenade that the race organizers never fenced off. It is narrow, slow,
+  and not on the minimap.
+
 ### Controls
 
 | Input | Action |
@@ -105,10 +120,8 @@ godot --headless --path pixelgp --script res://tests/author_textures.gd
 
 ## Known limitations (first playable)
 
-- Pit lane is decorative (entry/exit gaps in the barrier + painted boxes);
-  no pit-stop gameplay yet.
 - Cars are ghost-ish: simple push-apart contact, no damage.
-- AI ignores boost; player-only mechanic for now.
+- AI ignores boost and never uses the pit or hidden paths (player-only).
 - Procedural placeholder art language: generated textures and box buildings
   (now with district palettes, awnings, balconies, palette-quantized output,
   and the Press Start 2P pixel font — OFL license in assets/fonts/).

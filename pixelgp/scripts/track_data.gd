@@ -46,6 +46,7 @@ var teams: Array = []
 var sponsors: Array = []
 var tuning: Dictionary = {}
 var set_dressing: Array = []   # hand-placed prop layer (see set_dressing.gd)
+var branches: Array = []       # alternate corridors (pit lane, hidden paths)
 var track_name := "Harbor Crown Circuit"
 
 func load_track(path := "res://data/harbor_crown_track.json") -> void:
@@ -87,6 +88,47 @@ func load_track(path := "res://data/harbor_crown_track.json") -> void:
 	_build_derived()
 	_build_checkpoints()
 	_build_corners()
+	_build_branches_data(data)
+
+## Branches: alternate corridors (pit lane, hidden shortcuts). Same clamp
+## physics as the main road, linear instead of looped; entry/exit anchored to
+## the nearest main-line samples.
+func _build_branches_data(data: Dictionary) -> void:
+	branches.clear()
+	for bd in data.get("branches", []):
+		var pts := PackedVector3Array()
+		for p in bd["points"]:
+			pts.append(Vector3(p[0] * WORLD_SCALE, 0.8, p[1] * WORLD_SCALE))
+		var seg_dir := PackedVector3Array()
+		var seg_norm := PackedVector3Array()
+		var cum := PackedFloat32Array()
+		var dist := 0.0
+		for i in pts.size() - 1:
+			cum.append(dist)
+			var d := Vector2(pts[i + 1].x - pts[i].x, pts[i + 1].z - pts[i].z)
+			dist += d.length()
+			var dn := d.normalized()
+			seg_dir.append(Vector3(dn.x, 0, dn.y))
+			seg_norm.append(Vector3(dn.y, 0, -dn.x))
+		var entry_idx := nearest_index_hint(pts[0].x, pts[0].z, 0, 0, n - 1)
+		var exit_idx := nearest_index_hint(pts[-1].x, pts[-1].z, 0, 0, n - 1)
+		var ep: Vector3 = samples[entry_idx]
+		var en: Vector3 = normals[entry_idx]
+		var entry_side := signf((pts[0].x - ep.x) * en.x + (pts[0].z - ep.z) * en.z)
+		branches.append({
+			"name": bd["name"],
+			"type": bd["type"],
+			"half": float(bd["half_width"]),
+			"cap": float(bd["speed_cap"]),
+			"pts": pts,
+			"seg_dir": seg_dir,
+			"seg_norm": seg_norm,
+			"cum": cum,
+			"len": dist,
+			"entry_idx": entry_idx,
+			"exit_idx": exit_idx,
+			"entry_side": entry_side,
+		})
 
 static func _catmull(p0: Vector3, p1: Vector3, p2: Vector3, p3: Vector3, t: float) -> Vector3:
 	var t2 := t * t

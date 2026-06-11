@@ -37,6 +37,14 @@ var boost := 0.5
 var boost_lock := 0.0   # wall contact pauses boost regen — mistakes cost the
 						# exact resource used to mask them
 var boosting := false
+var slipstreaming := false
+
+# branch corridor state (pit lane / hidden paths); null = on the main road
+var branch = null       # Dictionary from track.branches
+var branch_seg := 0
+var branch_s := 0.0
+var pit_stamp := -10.0  # race time of last pit boost refill (for HUD/audio)
+var _pit_refilled := false
 var braking := false
 var wall_hit := false
 var impact_stamp := -10.0  # race time of last wall impact (for fx/audio)
@@ -88,7 +96,9 @@ func step(dt: float, t_now: float, input: Dictionary) -> void:
 	elif boost_lock <= 0.0:
 		boost = minf(boost + 0.045 * dt, 1.0)
 
-	var vmax := MAXV * (BOOST_MULT if boosting else 1.0) * float(input.get("vmax_scale", 1.0))
+	var vmax_scale := float(input.get("vmax_scale", 1.0))
+	slipstreaming = vmax_scale > 1.04
+	var vmax := MAXV * (BOOST_MULT if boosting else 1.0) * vmax_scale
 	speed += ACCEL * (1.25 if boosting else 1.0) * throttle * dt
 	speed -= BRAKE * BRAKE_EFFECT * brake_in * dt
 	speed -= speed * DRAG * COAST_DRAG_SCALE * dt
@@ -105,12 +115,104 @@ func step(dt: float, t_now: float, input: Dictionary) -> void:
 	pos.x += cos(move_dir) * speed * dt
 	pos.z += sin(move_dir) * speed * dt
 
+	if branch != null:
+		_step_branch(dt, t_now)
+		_update_checkpoints(t_now)
+		return
+
 	prev_idx = idx
 	idx = track.nearest_index_hint(pos.x, pos.z, idx)
 	_clamp_to_walls(t_now)
 	_snap_elevation()
 	_update_checkpoints(t_now)
 	_update_wrong_way()
+	if bool(input.get("branches", false)):
+		_check_branch_entry()
+
+## Branch corridors (pit / hidden paths): same wall-clamp model as the main
+## road on a short linear polyline. Main-track index stays synced so laps,
+## checkpoints, and positions keep working while off the main line.
+func _check_branch_entry() -> void:
+	for b in track.branches:
+		if absf(track.wrap_index_diff(idx, b["entry_idx"])) > 12:
+			continue
+		var p0: Vector3 = b["pts"][0]
+		if (pos.x - p0.x) ** 2 + (pos.z - p0.z) ** 2 > (b["half"] + 4.0) ** 2:
+			continue
+		# require deliberately steering off-line toward the branch side
+		var sp: Vector3 = track.samples[idx]
+		var nrm: Vector3 = track.normals[idx]
+		var lat := (pos.x - sp.x) * nrm.x + (pos.z - sp.z) * nrm.z
+		if lat * b["entry_side"] < 7.0:
+			continue
+		branch = b
+		branch_seg = 0
+		branch_s = 0.0
+		_pit_refilled = false
+		return
+
+func _step_branch(dt: float, t_now: float) -> void:
+	var b: Dictionary = branch
+	# branch speed limit (rapid limiter, not a hard snap)
+	if speed > b["cap"]:
+		speed = maxf(b["cap"], speed - 520.0 * dt)
+	# project onto nearby segments
+	var pts: PackedVector3Array = b["pts"]
+	var best_seg := branch_seg
+	var best_d := INF
+	for k in range(maxi(branch_seg - 1, 0), mini(branch_seg + 2, pts.size() - 1) + 1):
+		if k >= pts.size() - 1:
+			break
+		var d := (pts[k].x - pos.x) ** 2 + (pts[k].z - pos.z) ** 2
+		if d < best_d:
+			best_d = d
+			best_seg = k
+	branch_seg = best_seg
+	var a: Vector3 = pts[branch_seg]
+	var dir: Vector3 = b["seg_dir"][branch_seg]
+	var nrm: Vector3 = b["seg_norm"][branch_seg]
+	var along := (pos.x - a.x) * dir.x + (pos.z - a.z) * dir.z
+	branch_s = b["cum"][branch_seg] + maxf(along, 0.0)
+	# lateral clamp with the usual angle-scaled wall penalty
+	var lat := (pos.x - a.x) * nrm.x + (pos.z - a.z) * nrm.z
+	var lim: float = b["half"] - 2.5
+	if absf(lat) > lim:
+		var side := signf(lat)
+		pos.x -= nrm.x * (absf(lat) - lim) * side
+		pos.z -= nrm.z * (absf(lat) - lim) * side
+		var vx := cos(move_dir) * speed
+		var vz := sin(move_dir) * speed
+		var v_n := vx * nrm.x + vz * nrm.z
+		if v_n * side > 0.0:
+			var loss := clampf((absf(v_n) - 10.0) / 130.0, 0.0, 0.75)
+			speed *= 1.0 - loss
+			if loss > 0.02:
+				impact_stamp = t_now
+				impact_mag = loss
+			vx -= nrm.x * v_n
+			vz -= nrm.z * v_n
+			if Vector2(vx, vz).length() > 1.0:
+				var slide := atan2(vz, vx)
+				heading = wrapf(slide + wrapf(heading - slide, -PI, PI) * 0.5, -PI, PI)
+				move_dir = slide
+			wall_hit = true
+	pos.y = a.y
+	# keep the main-track index synced (laps/positions/checkpoints stay sane)
+	var span: int = track.wrap_index_diff(b["exit_idx"], b["entry_idx"])
+	var t01: float = clampf(branch_s / b["len"], 0.0, 1.0)
+	prev_idx = idx
+	idx = posmod(b["entry_idx"] + int(round(float(span) * t01)), track.n)
+	wrong_way = false
+	# pit service: full boost at the pit box
+	if b["type"] == "pit" and not _pit_refilled and branch_s > b["len"] * 0.45:
+		_pit_refilled = true
+		boost = 1.0
+		boost_lock = 0.0
+		pit_stamp = t_now
+	if branch_s >= b["len"] - 2.0:
+		idx = b["exit_idx"]
+		prev_idx = idx
+		branch = null
 
 func _clamp_to_walls(t_now: float) -> void:
 	wall_hit = false

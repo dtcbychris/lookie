@@ -73,6 +73,16 @@ var _reserved_all: Array[Rect2] = []
 func _build_reservations() -> void:
 	for r in RESERVED:
 		_reserved_all.append(r)
+	# branch corridors (pit / hidden paths) keep clear of RNG buildings/trees
+	for b in track.branches:
+		var pts: PackedVector3Array = b["pts"]
+		for i in pts.size() - 1:
+			var steps := maxi(int(Vector2(pts[i + 1].x - pts[i].x, pts[i + 1].z - pts[i].z).length() / 24.0), 1)
+			for s in steps + 1:
+				var p: Vector3 = pts[i].lerp(pts[i + 1], float(s) / steps)
+				var rect := Rect2(p.x * 0.5 - 9.0, p.z * 0.5 - 9.0, 18.0, 18.0)
+				_reserved_all.append(rect)
+				_building_rects.append(rect)
 	for e in track.set_dressing:
 		var at: Array = e["at"]
 		if e["type"] == "flag_row":
@@ -928,38 +938,11 @@ func _build_streetlights() -> void:
 # --- pit lane (decorative for the first playable) --------------------------------
 
 func _build_pit_lane() -> void:
-	var pts := PackedVector2Array([
-		_w(213, 597), _w(245, 601), _w(420, 601), _w(437, 594),
-	])
-	var mat := Pix.tex_mat(Pix.asphalt(), Color(0.8, 0.8, 0.85))
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for s in pts.size() - 1:
-		var a := pts[s]
-		var b := pts[s + 1]
-		var dir := (b - a).normalized()
-		var nrm := Vector2(dir.y, -dir.x) * 6.5
-		var y := 0.65  # just under road grade (ROAD_BASE) so the ramps read
-		var l0 := Vector3(a.x + nrm.x, y, a.y + nrm.y)
-		var r0 := Vector3(a.x - nrm.x, y, a.y - nrm.y)
-		var l1 := Vector3(b.x + nrm.x, y, b.y + nrm.y)
-		var r1 := Vector3(b.x - nrm.x, y, b.y - nrm.y)
-		st.set_uv(Vector2(0, 0)); st.add_vertex(l0)
-		st.set_uv(Vector2(1, 0)); st.add_vertex(r0)
-		st.set_uv(Vector2(0, 1)); st.add_vertex(l1)
-		st.set_uv(Vector2(0, 1)); st.add_vertex(l1)
-		st.set_uv(Vector2(1, 0)); st.add_vertex(r0)
-		st.set_uv(Vector2(1, 1)); st.add_vertex(r1)
-	st.generate_normals()
-	st.set_material(mat)
-	var mi := MeshInstance3D.new()
-	mi.mesh = st.commit()
-	add_child(mi)
-	# pit wall + painted boxes + signs
-	_box(Vector3(330, 3.5, 1.6), Vector3(666, 1.75, 1196), Pix.flat_mat(Color(0.9, 0.9, 0.92)))
+	# the driveable pit road itself is a branch corridor (see track JSON
+	# "branches" + track_builder._build_branches); this is the dressing
 	var box_mat := Pix.flat_mat(Color(0.95, 0.95, 0.95), 0.1)
 	for s in 4:
-		_box(Vector3(12, 0.1, 4.5), Vector3(580 + s * 60, 0.72, 1207), box_mat)
+		_box(Vector3(12, 0.1, 4.5), Vector3(580 + s * 60, 0.95, 1207), box_mat)
 	_label("PIT IN", Vector3(_w(213, 597).x, 6, _w(213, 597).y + 10), Vector3(-1, 0, 0.3), Color(0.4, 1.0, 0.5), 40)
 	_label("PIT OUT", Vector3(_w(437, 594).x, 6, _w(437, 594).y + 8), Vector3(1, 0, 0), Color(1.0, 0.6, 0.3), 40)
 	# pit crew gantries (kept inside the narrow pit corridor)

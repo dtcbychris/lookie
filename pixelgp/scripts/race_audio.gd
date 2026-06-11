@@ -18,6 +18,7 @@ var _beep_go: AudioStreamWAV
 var _blip: AudioStreamWAV
 
 var _impact_seen := -10.0
+var _pit_seen := -10.0
 var _prev_count := 99
 var _prev_state := -1
 var _prev_lap := 0
@@ -78,6 +79,12 @@ func _process(_dt: float) -> void:
 			_ui.stream = _beep_go
 			_ui.play()
 		_prev_state = race.state
+
+	# pit service ding
+	if car.pit_stamp > _pit_seen:
+		_pit_seen = car.pit_stamp
+		_ui.stream = _blip
+		_ui.play()
 
 	# lap complete blip (not on the finish, the sting covers that)
 	if car.lap > _prev_lap:

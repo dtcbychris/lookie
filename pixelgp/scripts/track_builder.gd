@@ -29,6 +29,73 @@ func build(p_track) -> void:
 	_build_tunnel()
 	_build_start_line()
 	_build_corner_signs()
+	_build_branches()
+
+## Branch corridors: pit lane and hidden paths get real driveable-looking
+## roads. Pit reads official (white walls, edge lines); hidden paths hide
+## behind hedges and stay off the minimap — player knowledge.
+func _build_branches() -> void:
+	var road_mat := Pix.tex_mat(Pix.asphalt())
+	var hedge_mat := Pix.flat_mat(Color(0.2, 0.42, 0.24))
+	var pit_wall_mat := Pix.flat_mat(Color(0.88, 0.88, 0.9))
+	for b in track.branches:
+		var pts: PackedVector3Array = b["pts"]
+		var half: float = b["half"]
+		# road strip
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		for s in pts.size() - 1:
+			var nrm: Vector3 = b["seg_norm"][s]
+			var l0: Vector3 = pts[s] + nrm * half + Vector3(0, 0.02, 0)
+			var r0: Vector3 = pts[s] - nrm * half + Vector3(0, 0.02, 0)
+			var l1: Vector3 = pts[s + 1] + nrm * half + Vector3(0, 0.02, 0)
+			var r1: Vector3 = pts[s + 1] - nrm * half + Vector3(0, 0.02, 0)
+			st.set_normal(Vector3.UP)
+			st.set_uv(Vector2(0, 0)); st.add_vertex(l0)
+			st.set_uv(Vector2(1, 0)); st.add_vertex(r0)
+			st.set_uv(Vector2(0, 2)); st.add_vertex(l1)
+			st.set_uv(Vector2(0, 2)); st.add_vertex(l1)
+			st.set_uv(Vector2(1, 0)); st.add_vertex(r0)
+			st.set_uv(Vector2(1, 2)); st.add_vertex(r1)
+		var m2: StandardMaterial3D = road_mat.duplicate()
+		m2.cull_mode = BaseMaterial3D.CULL_DISABLED
+		st.set_material(m2)
+		var mi := MeshInstance3D.new()
+		mi.mesh = st.commit()
+		add_child(mi)
+		# low side walls per segment, openings at both ends
+		var wall_mat: StandardMaterial3D = pit_wall_mat if b["type"] == "pit" else hedge_mat
+		var wall_h := 2.6 if b["type"] == "pit" else 3.4
+		for s in range(1, pts.size() - 2):
+			var a: Vector3 = pts[s]
+			var c: Vector3 = pts[s + 1]
+			var mid := (a + c) * 0.5
+			var seg_len := Vector2(c.x - a.x, c.z - a.z).length()
+			var yaw := -atan2(c.z - a.z, c.x - a.x)
+			for side in [-1.0, 1.0]:
+				var nrm2: Vector3 = b["seg_norm"][s]
+				var w := MeshInstance3D.new()
+				var bm := BoxMesh.new()
+				bm.size = Vector3(seg_len + 2.0, wall_h, 1.4)
+				w.mesh = bm
+				w.material_override = wall_mat
+				w.position = mid + nrm2 * (half + 1.2) * side + Vector3(0, wall_h * 0.5, 0)
+				w.rotation.y = yaw
+				add_child(w)
+		# hidden entry disguise: flanking hedges that read as a solid wall
+		# from the racing line but leave the gap driveable
+		if b["type"] == "hidden":
+			var n0: Vector3 = b["seg_norm"][0]
+			var d0: Vector3 = b["seg_dir"][0]
+			for side in [-1.0, 1.0]:
+				var h := MeshInstance3D.new()
+				var hm := BoxMesh.new()
+				hm.size = Vector3(7, 4.2, 2.2)
+				h.mesh = hm
+				h.material_override = hedge_mat
+				h.position = pts[0] + n0 * (half + 2.8) * side - d0 * 2.0 + Vector3(0, 2.1, 0)
+				h.rotation.y = -atan2(d0.z, d0.x)
+				add_child(h)
 
 # --- generic strip builders -------------------------------------------------
 

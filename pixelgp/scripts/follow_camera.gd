@@ -9,6 +9,8 @@ const MODES := [
 	[198.0, 206.0, 0.15],  # SHOWCASE (~44 degrees)
 ]
 
+const RM = preload("res://scripts/race_manager.gd")
+
 var race  # RaceManager
 var track  # TrackData
 var mode := 0
@@ -40,6 +42,18 @@ func setup(p_race, p_track) -> void:
 	current = true
 
 func _physics_process(dt: float) -> void:
+	if race.state == RM.State.MENU:
+		# attract mode: drift along the circuit behind the menu
+		var tt := Time.get_ticks_msec() / 1000.0
+		var fi := fposmod(tt * 9.0, float(track.n))
+		var i := int(fi)
+		var p: Vector3 = track.samples[i]
+		var ahead: Vector3 = track.samples[(i + 45) % track.n]
+		var blend_a := 1.0 - exp(-2.0 * dt)
+		position = position.lerp(p + Vector3(0, 105, 70), blend_a)
+		_look = _look.lerp(ahead + Vector3(0, 8, 0), blend_a)
+		look_at(_look)
+		return
 	if Input.is_action_just_pressed("overview"):
 		overview = not overview
 	var car = race.cars[race.player_index]
