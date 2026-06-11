@@ -45,6 +45,7 @@ var corners: Array[Dictionary] = []  # {"index": int, "number": int}
 var teams: Array = []
 var sponsors: Array = []
 var tuning: Dictionary = {}
+var set_dressing: Array = []   # hand-placed prop layer (see set_dressing.gd)
 var track_name := "Harbor Crown Circuit"
 
 func load_track(path := "res://data/harbor_crown_track.json") -> void:
@@ -53,6 +54,7 @@ func load_track(path := "res://data/harbor_crown_track.json") -> void:
 	teams = data["teams"]
 	sponsors = data["sponsors"]
 	tuning = data["proven_tuning"]
+	set_dressing = data.get("set_dressing", [])
 	var cps: Array = data["centerline_control_points"]
 	var m := cps.size()
 	var ctrl: Array[Vector3] = []

@@ -317,5 +317,25 @@
     "APEX OIL",
     "AZURE BAY MARINA",
     "RIVIERA RACING LEAGUE"
+  ],
+  "set_dressing_comment": "hand-placed composition layer; art-px coords, facing in degrees (0=+x east, 90=+z south). Rendered by scripts/set_dressing.gd prop library.",
+  "set_dressing": [
+    { "type": "flag_row", "at": [300, 560], "facing": 0, "count": 8 },
+    { "type": "flag_row", "at": [806, 92], "facing": 0, "count": 5 },
+    { "type": "big_screen", "at": [432, 543], "facing": 215 },
+    { "type": "big_screen", "at": [884, 142], "facing": 180 },
+    { "type": "tv_crane", "at": [700, 302], "facing": 270 },
+    { "type": "tv_crane", "at": [148, 478], "facing": 0 },
+    { "type": "camera_tower", "at": [300, 763], "facing": 270 },
+    { "type": "camera_tower", "at": [817, 380], "facing": 90 },
+    { "type": "marshal_post", "at": [500, 553], "facing": 110 },
+    { "type": "marshal_post", "at": [96, 588], "facing": 20 },
+    { "type": "marshal_post", "at": [768, 238], "facing": 160 },
+    { "type": "marshal_post", "at": [213, 296], "facing": 80 },
+    { "type": "statue", "at": [262, 480], "facing": 270 },
+    { "type": "cafe_terrace", "at": [455, 646], "facing": 90 },
+    { "type": "cafe_terrace", "at": [592, 646], "facing": 90 },
+    { "type": "helipad", "at": [864, 746], "facing": 0 },
+    { "type": "harbor_crane", "at": [186, 700], "facing": 0 }
   ]
 }

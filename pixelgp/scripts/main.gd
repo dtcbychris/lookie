@@ -9,6 +9,7 @@ const CarPhysics = preload("res://scripts/car_physics.gd")
 const AIDriver = preload("res://scripts/ai_driver.gd")
 const TrackBuilder = preload("res://scripts/track_builder.gd")
 const SceneryBuilder = preload("res://scripts/scenery_builder.gd")
+const SetDressing = preload("res://scripts/set_dressing.gd")
 const CarNode = preload("res://scripts/car_node.gd")
 const RaceManager = preload("res://scripts/race_manager.gd")
 const FollowCamera = preload("res://scripts/follow_camera.gd")
@@ -52,6 +53,10 @@ func _ready() -> void:
 	var scenery: Node3D = SceneryBuilder.new()
 	world.add_child(scenery)
 	scenery.build(track)
+
+	var dressing: Node3D = SetDressing.new()
+	world.add_child(dressing)
+	dressing.build(track)
 
 	var race: Node = RaceManager.new()
 	race.name = "RaceManager"

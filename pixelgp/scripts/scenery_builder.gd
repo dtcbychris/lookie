@@ -61,9 +61,33 @@ const RESERVED := [
 	Rect2(722, 662, 44, 32),  # marina yacht club
 ]
 
+## Ground footprint (art px, square side) auto-reserved around each
+## set-dressing entry so RNG buildings/trees keep clear.
+const DRESS_RESERVE := {
+	"helipad": 40, "harbor_crane": 26, "statue": 30, "cafe_terrace": 24,
+	"big_screen": 18, "tv_crane": 22, "camera_tower": 8, "marshal_post": 8,
+}
+
+var _reserved_all: Array[Rect2] = []
+
+func _build_reservations() -> void:
+	for r in RESERVED:
+		_reserved_all.append(r)
+	for e in track.set_dressing:
+		var at: Array = e["at"]
+		if e["type"] == "flag_row":
+			var length := float(e.get("count", 6)) * 8.0
+			_reserved_all.append(Rect2(at[0] - 4.0, at[1] - 4.0, length + 8.0, 8.0))
+			continue
+		var s: float = DRESS_RESERVE.get(e["type"], 10)
+		var rect := Rect2(at[0] - s * 0.5, at[1] - s * 0.5, s, s)
+		_reserved_all.append(rect)
+		_building_rects.append(rect)  # trees and umbrellas keep out too
+
 func build(p_track) -> void:
 	track = p_track
 	_rng.seed = 7
+	_build_reservations()
 	_build_ground_and_water()
 	_build_marina()
 	_build_city()
@@ -249,8 +273,8 @@ func _build_city() -> void:
 			if track.min_dist_to_track(p.x, p.y) < track.HALF + 10.0 + half_diag:
 				continue
 			var reserved := false
-			for rr in RESERVED:
-				if (rr as Rect2).intersects(Rect2(ax - w * 0.25, ay - d * 0.25, w * 0.5, d * 0.5)):
+			for rr in _reserved_all:
+				if rr.intersects(Rect2(ax - w * 0.25, ay - d * 0.25, w * 0.5, d * 0.5)):
 					reserved = true
 					break
 			if reserved:
