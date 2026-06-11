@@ -233,21 +233,27 @@ func _build_tunnel() -> void:
 			_portal(run_start + run)
 		i += 1
 
+## Tunnel portal as a stone gallery facade: pillars, lintel, cornice, parapet.
 func _portal(i: int) -> void:
 	i = i % track.n
 	var p: Vector3 = track.samples[i]
 	var t: Vector3 = track.tangents[i]
-	var arch := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = Vector3(4, 4.5, (track.HALF + 5.0) * 2.0)
-	arch.mesh = bm
-	# slight self-illumination: the sun-away face otherwise renders as a
-	# near-black slab floating over the road
-	arch.material_override = Pix.flat_mat(Color(0.78, 0.72, 0.62), 0.35)
-	arch.position = p + Vector3(0, 14.0, 0)
-	arch.rotation.y = -atan2(t.z, t.x)
-	arch.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(arch)
+	var root := Node3D.new()
+	root.position = p
+	root.rotation.y = -atan2(t.z, t.x)
+	add_child(root)
+	var stone := Pix.flat_mat(Color(0.74, 0.68, 0.56), 0.18)
+	var trim := Pix.flat_mat(Color(0.86, 0.81, 0.7), 0.2)
+	var recess := Pix.flat_mat(Color(0.12, 0.13, 0.18))
+	var lat: float = track.HALF + 4.5
+	for side in [-1.0, 1.0]:
+		_portal_part(root, Vector3(5, 16, 5), Vector3(0, 8, side * lat), stone, false)
+		_portal_part(root, Vector3(6, 1.2, 6), Vector3(0, 16.6, side * lat), trim, false)
+	# dark arch recess under the lintel, then lintel band, cornice, parapet
+	_portal_part(root, Vector3(3.5, 3.0, lat * 2.0 - 4.0), Vector3(0, 12.6, 0), recess, true)
+	_portal_part(root, Vector3(4.5, 4.0, (lat + 2.0) * 2.0), Vector3(0, 16, 0), stone, true)
+	_portal_part(root, Vector3(5.5, 1.4, (lat + 3.0) * 2.0), Vector3(0, 18.7, 0), trim, true)
+	_portal_part(root, Vector3(4, 2.4, 12), Vector3(0, 20.6, 0), stone, true)
 	var lbl := Label3D.new()
 	lbl.text = "AZURE TUNNEL"
 	lbl.font = Pix.pixel_font()
@@ -255,9 +261,20 @@ func _portal(i: int) -> void:
 	lbl.pixel_size = 0.08
 	lbl.modulate = Color(0.5, 0.85, 1.0)
 	lbl.outline_size = 14
-	lbl.position = p + Vector3(0, 18.5, 0)
+	lbl.position = p + Vector3(0, 22.6, 0)
 	lbl.rotation.y = atan2(-t.x, -t.z)  # face oncoming traffic
 	add_child(lbl)
+
+func _portal_part(root: Node3D, size: Vector3, pos: Vector3, mat: Material, no_shadow: bool) -> void:
+	var mi := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = size
+	mi.mesh = bm
+	mi.material_override = mat
+	mi.position = pos
+	if no_shadow:
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(mi)
 
 func _build_start_line() -> void:
 	_ribbon(track.n - 2, 3, track.HALF, -track.HALF, 0.18, Pix.tex_mat(Pix.checker()))

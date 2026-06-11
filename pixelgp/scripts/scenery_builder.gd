@@ -53,14 +53,25 @@ var _crowd_anims: Array = []  # {"mat": StandardMaterial3D, "frames": [Texture2D
 var _crowd_frame := 0
 var _building_rects: Array[Rect2] = []  # art-space footprints, for tree placement
 
+## Art-space rects reserved for hand-authored landmark set pieces; the RNG
+## city scatter keeps out of them.
+const RESERVED := [
+	Rect2(318, 508, 54, 36),  # Grand Riviera Hotel (behind start/finish)
+	Rect2(228, 408, 40, 44),  # old-town clock tower church
+	Rect2(722, 662, 44, 32),  # marina yacht club
+]
+
 func build(p_track) -> void:
 	track = p_track
 	_rng.seed = 7
 	_build_ground_and_water()
 	_build_marina()
 	_build_city()
-	_build_trees()
 	_build_casino()
+	_build_yacht_club()
+	_build_church()
+	_build_hotel()
+	_build_trees()
 	_build_grandstands()
 	_build_trackside_crowds()
 	_build_palms()
@@ -236,6 +247,13 @@ func _build_city() -> void:
 			var half_diag := Vector2(w, d).length() * 0.5
 			var p := _w(ax, ay)
 			if track.min_dist_to_track(p.x, p.y) < track.HALF + 10.0 + half_diag:
+				continue
+			var reserved := false
+			for rr in RESERVED:
+				if (rr as Rect2).intersects(Rect2(ax - w * 0.25, ay - d * 0.25, w * 0.5, d * 0.5)):
+					reserved = true
+					break
+			if reserved:
 				continue
 			var h := _rng.randf_range(28, 95)
 			# hillside city: building tops must clear nearby elevated roads
@@ -578,6 +596,140 @@ func _build_casino() -> void:
 
 	# marquee sign, pulsing (kept from before)
 	_casino_sign = _label("CROWN CASINO", Vector3(cx - 21, base_y + 20, cz), Vector3(-1, 0, 0), Color(1.0, 0.84, 0.2), 48, 0.085)
+
+## Azure Bay Yacht Club: white terraced clubhouse on the east marina shore
+## with glass front, flag mast, terrace umbrellas, and a private pier.
+func _build_yacht_club() -> void:
+	var cx := 1490.0
+	var cz := 1360.0
+	_building_rects.append(Rect2(722, 662, 44, 32))
+	var white := Pix.flat_mat(Color(0.94, 0.94, 0.92))
+	var stone := Pix.flat_mat(Color(0.8, 0.76, 0.66))
+	var glass := Pix.flat_mat(Color(0.4, 0.7, 0.9), 0.4)
+	var navy := Pix.flat_mat(Color(0.15, 0.25, 0.45))
+	_box(Vector3(76, 1.5, 56), Vector3(cx, 0.75, cz), stone)         # terrace
+	_box(Vector3(58, 10, 40), Vector3(cx + 4, 6.5, cz), white)       # main hall
+	_box(Vector3(1.2, 6, 34), Vector3(cx - 25.5, 6, cz), glass)      # glass front (west, to the water)
+	_box(Vector3(44, 8, 28), Vector3(cx + 8, 15.5, cz), white)       # upper deck
+	_box(Vector3(46, 1, 30), Vector3(cx + 8, 20, cz), navy)          # roof trim
+	for k in 5:                                                       # terrace railing posts
+		_box(Vector3(0.6, 1.6, 0.6), Vector3(cx - 36, 2.3, cz - 24 + k * 12), white)
+	_box(Vector3(0.5, 0.4, 52), Vector3(cx - 36, 3.0, cz), white)
+	var mast := _box(Vector3(1.0, 26, 1.0), Vector3(cx + 26, 13, cz - 16), white)
+	var pennant := MeshInstance3D.new()
+	var pq := QuadMesh.new()
+	pq.size = Vector2(4.5, 2.5)
+	pennant.mesh = pq
+	var pm := Pix.flat_mat(Color(0.15, 0.35, 0.7), 0.2)
+	pm.cull_mode = BaseMaterial3D.CULL_DISABLED
+	pennant.material_override = pm
+	pennant.position = Vector3(2.5, 11.5, 0)
+	mast.add_child(pennant)
+	_flags.append(pennant)
+	for k in 3:
+		_umbrella_at(Vector3(cx - 28 + k * 16, 1.5, cz + 20), Color(0.15, 0.35, 0.7))
+	_box(Vector3(56, 1, 5), Vector3(cx - 66, -3.2, cz), Pix.flat_mat(Color(0.55, 0.4, 0.25)))  # private pier
+	_yacht(Vector2(cx - 70, cz - 14), 0.4, 1.3, false)
+	_yacht(Vector2(cx - 78, cz + 16), -0.3, 0.9, false)
+	_label("YACHT CLUB", Vector3(cx - 27, 13, cz), Vector3(-1, 0, 0), Color(0.15, 0.3, 0.55), 32, 0.07)
+
+## Old-town clock tower church: stone nave with tiered terracotta roof and a
+## tall campanile with arched openings, clock face, and pyramid spire.
+func _build_church() -> void:
+	var cx := 500.0
+	var cz := 860.0
+	_building_rects.append(Rect2(228, 408, 40, 44))
+	var stone := Pix.flat_mat(Color(0.8, 0.68, 0.5))
+	var stone_dark := Pix.flat_mat(Color(0.68, 0.56, 0.4))
+	var terra := Pix.flat_mat(Color(0.62, 0.33, 0.2))
+	var glow := Pix.flat_mat(Color(1.0, 0.85, 0.45), 1.2)
+	_box(Vector3(40, 22, 64), Vector3(cx + 6, 11, cz), stone)        # nave
+	_box(Vector3(44, 2, 68), Vector3(cx + 6, 23, cz), terra)         # tiered gable roof
+	_box(Vector3(34, 2.4, 58), Vector3(cx + 6, 25, cz), terra)
+	_box(Vector3(20, 2.6, 46), Vector3(cx + 6, 27.4, cz), terra)
+	for k in 4:                                                       # nave windows
+		_box(Vector3(1.0, 7, 2.4), Vector3(cx - 14.2, 12, cz - 21 + k * 14), glow)
+		_box(Vector3(1.0, 7, 2.4), Vector3(cx + 26.2, 12, cz - 21 + k * 14), glow)
+	# campanile
+	var tx := cx - 22.0
+	var tz := cz - 22.0
+	_box(Vector3(15, 52, 15), Vector3(tx, 26, tz), stone_dark)
+	_box(Vector3(17, 1.4, 17), Vector3(tx, 52.6, tz), stone)
+	for side in [-1.0, 1.0]:                                          # arched bell openings
+		_box(Vector3(2.6, 6, 1.0), Vector3(tx + side * 7.6, 46, tz), Pix.flat_mat(Color(0.1, 0.1, 0.14)))
+		_box(Vector3(1.0, 6, 2.6), Vector3(tx, 46, tz + side * 7.6), Pix.flat_mat(Color(0.1, 0.1, 0.14)))
+	_box(Vector3(0.8, 6, 6), Vector3(tx - 7.9, 34, tz), Pix.flat_mat(Color(0.93, 0.9, 0.84)))  # clock face
+	_box(Vector3(0.4, 0.8, 2.4), Vector3(tx - 8.1, 34.4, tz - 0.6), Pix.flat_mat(Color(0.1, 0.1, 0.12)))  # hands
+	var spire := MeshInstance3D.new()
+	var sc := CylinderMesh.new()
+	sc.top_radius = 0.0
+	sc.bottom_radius = 10.0
+	sc.height = 13.0
+	sc.radial_segments = 4
+	spire.mesh = sc
+	spire.material_override = terra
+	spire.position = Vector3(tx, 59.5, tz)
+	spire.rotation.y = PI / 4.0
+	add_child(spire)
+	_box(Vector3(0.8, 3.5, 0.8), Vector3(tx, 67, tz), Pix.flat_mat(Color(0.85, 0.68, 0.28), 0.3))
+	_tree_pair(Vector3(cx + 6, 0, cz + 40))
+
+## Grand Riviera Hotel: belle-epoque U-block facing the start/finish straight —
+## the backdrop of every starting grid screenshot.
+func _build_hotel() -> void:
+	var cx := 690.0
+	var cz := 1056.0
+	_building_rects.append(Rect2(318, 508, 54, 36))
+	var cream := Pix.flat_mat(Color(0.93, 0.88, 0.76), 0.1)
+	var trim := Pix.flat_mat(Color(0.85, 0.68, 0.28), 0.25)
+	var copper := Pix.flat_mat(Color(0.4, 0.62, 0.52))
+	var glow := Pix.flat_mat(Color(1.0, 0.85, 0.45), 1.4)
+	var red := Pix.flat_mat(Color(0.7, 0.15, 0.18))
+	_box(Vector3(104, 3, 66), Vector3(cx, 1.5, cz), Pix.flat_mat(Color(0.8, 0.76, 0.66)))
+	_box(Vector3(56, 58, 38), Vector3(cx, 32, cz - 6), cream)        # central block
+	_box(Vector3(58, 1.4, 40), Vector3(cx, 48, cz - 6), trim)        # cornice
+	_box(Vector3(50, 8, 32), Vector3(cx, 64, cz - 6), copper)        # mansard roof
+	for side in [-1.0, 1.0]:                                          # forward wings
+		_box(Vector3(26, 42, 30), Vector3(cx + side * 39, 24, cz + 10), cream)
+		_box(Vector3(28, 1.4, 32), Vector3(cx + side * 39, 45.6, cz + 10), trim)
+		_box(Vector3(22, 6, 26), Vector3(cx + side * 39, 49.5, cz + 10), copper)
+	# lit windows on the track-facing south faces
+	for f in 5:
+		for k in 6:
+			_box(Vector3(2.4, 4.5, 1.0), Vector3(cx - 20 + k * 8, 12 + f * 9.5, cz + 13.2), glow)
+		for side in [-1.0, 1.0]:
+			for k in 2:
+				_box(Vector3(2.4, 4.5, 1.0), Vector3(cx + side * 39 - 4 + k * 8, 10 + f * 7, cz + 25.2), glow)
+	# entrance canopy + carpet
+	_box(Vector3(18, 1.2, 8), Vector3(cx, 10, cz + 15), red)
+	for k in 4:
+		_box(Vector3(1.2, 7, 1.2), Vector3(cx - 7 + k * 4.6, 6.5, cz + 18), cream)
+	_box(Vector3(8, 0.3, 16), Vector3(cx, 3.2, cz + 24), red)
+	# rooftop sign
+	for side in [-1.0, 1.0]:
+		_box(Vector3(1, 7, 1), Vector3(cx + side * 22, 71, cz - 6), trim)
+	_label("GRAND RIVIERA", Vector3(cx, 72.5, cz - 5), Vector3(0, 0, 1), Color(1.0, 0.84, 0.2), 32, 0.1)
+	_tree_pair(Vector3(cx - 42, 0, cz + 22))
+	_tree_pair(Vector3(cx + 42, 0, cz + 22))
+
+func _tree_pair(pos: Vector3) -> void:
+	var trunk := Pix.flat_mat(Color(0.42, 0.3, 0.2))
+	var crown := Pix.flat_mat(Color(0.24, 0.5, 0.27))
+	_tree(pos + Vector3(-5, 0, 0), 0.9, trunk, crown)
+	_tree(pos + Vector3(5, 0, 2), 0.75, trunk, crown)
+
+func _umbrella_at(pos: Vector3, c: Color) -> void:
+	var pole := _box(Vector3(0.5, 4, 0.5), pos + Vector3(0, 2, 0), Pix.flat_mat(Color(0.75, 0.72, 0.68)))
+	var canopy := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = 0.3
+	cm.bottom_radius = 3.4
+	cm.height = 1.6
+	cm.radial_segments = 8
+	canopy.mesh = cm
+	canopy.material_override = Pix.flat_mat(c)
+	canopy.position = Vector3(0, 2.2, 0)
+	pole.add_child(canopy)
 
 # --- grandstands ---------------------------------------------------------------
 
