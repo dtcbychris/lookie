@@ -892,12 +892,12 @@ func _build_billboards() -> void:
 		var k := run_start + 8
 		while k < i - 8:
 			var side: float = 1.0 if count % 2 == 0 else -1.0
-			var pos: Vector3 = track.samples[k] + track.normals[k] * (track.HALF + 9.0) * side
-			var a: Vector2 = track.art[k] + Vector2(track.normals[k].x, track.normals[k].z) * (track.HALF + 9.0) * side / 2.0
+			var pos: Vector3 = track.samples[k] + track.normals[k] * (track.HALF + 11.0) * side
+			var a: Vector2 = track.art[k] + Vector2(track.normals[k].x, track.normals[k].z) * (track.HALF + 11.0) * side / 2.0
 			# global clearance check: don't sit on another corridor of the circuit
 			# (e.g. the opposite carriageway of the pit straight)
 			if not _in_water_art(a) and not track.in_tunnel(k) \
-					and track.min_dist_to_track(pos.x, pos.z) > track.HALF + 5.0:
+					and track.min_dist_to_track(pos.x, pos.z) > track.HALF + 7.0:
 				var sponsor: String = names[count % names.size()]
 				var col: Color = palette.get(sponsor, Color(0.2, 0.2, 0.25))
 				var t: Vector3 = track.tangents[k]
@@ -943,8 +943,9 @@ func _build_pit_lane() -> void:
 	var box_mat := Pix.flat_mat(Color(0.95, 0.95, 0.95), 0.1)
 	for s in 4:
 		_box(Vector3(12, 0.1, 4.5), Vector3(580 + s * 60, 0.95, 1207), box_mat)
-	_label("PIT IN", Vector3(_w(213, 597).x, 6, _w(213, 597).y + 10), Vector3(-1, 0, 0.3), Color(0.4, 1.0, 0.5), 40)
-	_label("PIT OUT", Vector3(_w(437, 594).x, 6, _w(437, 594).y + 8), Vector3(1, 0, 0), Color(1.0, 0.6, 0.3), 40)
-	# pit crew gantries (kept inside the narrow pit corridor)
-	for s in 4:
-		_box(Vector3(8, 5, 2.5), Vector3(580 + s * 60, 2.5, 1210), Pix.flat_mat(Color(0.3, 0.32, 0.38)))
+	# billboard labels: fixed-rotation Label3Ds read as one-pixel slivers
+	# when seen edge-on from the race camera
+	var pin := _label("PIT IN", Vector3(_w(213, 597).x, 6, _w(213, 597).y + 10), Vector3(-1, 0, 0.3), Color(0.4, 1.0, 0.5), 40)
+	pin.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	var pout := _label("PIT OUT", Vector3(_w(437, 594).x, 6, _w(437, 594).y + 8), Vector3(1, 0, 0), Color(1.0, 0.6, 0.3), 40)
+	pout.billboard = BaseMaterial3D.BILLBOARD_ENABLED

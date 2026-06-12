@@ -117,6 +117,9 @@ func _build_branches_data(data: Dictionary) -> void:
 		var ep: Vector3 = samples[entry_idx]
 		var en: Vector3 = normals[entry_idx]
 		var entry_side := signf((pts[0].x - ep.x) * en.x + (pts[0].z - ep.z) * en.z)
+		var xp: Vector3 = samples[exit_idx]
+		var xn: Vector3 = normals[exit_idx]
+		var exit_side := signf((pts[-1].x - xp.x) * xn.x + (pts[-1].z - xp.z) * xn.z)
 		branches.append({
 			"name": bd["name"],
 			"type": bd["type"],
@@ -131,6 +134,7 @@ func _build_branches_data(data: Dictionary) -> void:
 			"entry_idx": entry_idx,
 			"exit_idx": exit_idx,
 			"entry_side": entry_side,
+			"exit_side": exit_side,
 		})
 
 ## Open Catmull-Rom: clamped ends (first/last control duplicated).

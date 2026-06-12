@@ -63,13 +63,16 @@ func _build_branches() -> void:
 		var mi := MeshInstance3D.new()
 		mi.mesh = st.commit()
 		add_child(mi)
-		# low side walls per segment, openings at both ends
+		# low side walls per segment — only where the corridor is clear of the
+		# main road, so branch railings never intersect the circuit's barriers
 		var wall_mat: StandardMaterial3D = pit_wall_mat if b["type"] == "pit" else hedge_mat
 		var wall_h := 2.6 if b["type"] == "pit" else 3.4
-		for s in range(2, pts.size() - 4):
+		for s in range(1, pts.size() - 2):
 			var a: Vector3 = pts[s]
 			var c: Vector3 = pts[s + 1]
 			var mid := (a + c) * 0.5
+			if track.min_dist_to_track(mid.x, mid.z) < track.HALF + 4.0:
+				continue
 			var seg_len := Vector2(c.x - a.x, c.z - a.z).length()
 			var yaw := -atan2(c.z - a.z, c.x - a.x)
 			for side in [-1.0, 1.0]:
@@ -82,20 +85,28 @@ func _build_branches() -> void:
 				w.position = mid + nrm2 * (half + 1.2) * side + Vector3(0, wall_h * 0.5, 0)
 				w.rotation.y = yaw
 				add_child(w)
-		# hidden entry: flanking hedges + a sliding gate that seals the mouth.
-		# Closed, it reads as solid hedge wall; the race director opens it for
-		# one lap (see race_manager.hidden_gate_open) and it sinks away.
+		# hidden entry: the gate and its dressing sit at the first point of the
+		# alley that is CLEAR of the main road, so nothing encroaches on the
+		# racing surface or clips the circuit barriers. Closed, the gate reads
+		# as solid hedge; the race director opens it for one lap and it sinks.
 		if b["type"] == "hidden":
-			var n0: Vector3 = b["seg_norm"][0]
-			var d0: Vector3 = b["seg_dir"][0]
-			var mouth_yaw := -atan2(d0.z, d0.x)
+			var gi := 1
+			while gi < pts.size() - 2 and track.min_dist_to_track(pts[gi].x, pts[gi].z) < track.HALF + 4.0:
+				gi += 1
+			var gp: Vector3 = pts[gi]
+			var gd: Vector3 = b["seg_dir"][mini(gi, pts.size() - 2)]
+			var gn: Vector3 = b["seg_norm"][mini(gi, pts.size() - 2)]
+			var mouth_yaw := -atan2(gd.z, gd.x)
 			for side in [-1.0, 1.0]:
+				var hpos: Vector3 = gp + gn * (half + 2.8) * side - gd * 2.0
+				if track.min_dist_to_track(hpos.x, hpos.z) < track.HALF + 2.0:
+					continue
 				var h := MeshInstance3D.new()
 				var hm := BoxMesh.new()
 				hm.size = Vector3(7, 4.2, 2.2)
 				h.mesh = hm
 				h.material_override = hedge_mat
-				h.position = pts[0] + n0 * (half + 2.8) * side - d0 * 2.0 + Vector3(0, 2.1, 0)
+				h.position = hpos + Vector3(0, 2.1, 0)
 				h.rotation.y = mouth_yaw
 				add_child(h)
 			hidden_gate = MeshInstance3D.new()
@@ -103,17 +114,19 @@ func _build_branches() -> void:
 			gm.size = Vector3(1.6, 4.0, half * 2.0 + 2.0)
 			hidden_gate.mesh = gm
 			hidden_gate.material_override = hedge_mat.duplicate()
-			hidden_gate.position = pts[0] + d0 * 0.5 + Vector3(0, 2.0, 0)
+			hidden_gate.position = gp + gd * 0.5 + Vector3(0, 2.0, 0)
 			hidden_gate.rotation.y = mouth_yaw
 			add_child(hidden_gate)
 			_gate_closed_y = hidden_gate.position.y
-			# signal lamp on a post beside the mouth
+			# signal lamp on a post beside the gate, on the away-from-road side
+			var lamp_side: float = -b["entry_side"]
+			var lpos: Vector3 = gp + gn * (half + 2.0) * lamp_side
 			var post := MeshInstance3D.new()
 			var pm2 := BoxMesh.new()
 			pm2.size = Vector3(0.7, 6.5, 0.7)
 			post.mesh = pm2
 			post.material_override = Pix.flat_mat(Color(0.3, 0.3, 0.33))
-			post.position = pts[0] + n0 * (half + 2.0) + Vector3(0, 3.25, 0)
+			post.position = lpos + Vector3(0, 3.25, 0)
 			add_child(post)
 			gate_lamp_mat = Pix.flat_mat(Color(0.7, 0.12, 0.1), 1.8)
 			var lamp := MeshInstance3D.new()
@@ -121,7 +134,7 @@ func _build_branches() -> void:
 			lm2.size = Vector3(1.4, 1.4, 1.4)
 			lamp.mesh = lm2
 			lamp.material_override = gate_lamp_mat
-			lamp.position = pts[0] + n0 * (half + 2.0) + Vector3(0, 7.0, 0)
+			lamp.position = lpos + Vector3(0, 7.0, 0)
 			add_child(lamp)
 
 ## Animate the hidden gate (called from main each frame): sinks into the
@@ -145,17 +158,35 @@ func _row_point(i: int, lat: float, y_off: float) -> Vector3:
 	var s: Vector3 = track.samples[i % track.n]
 	return s + track.normals[i % track.n] * lat + Vector3(0, y_off, 0)
 
-func _ribbon(i_from: int, seg_count: int, lat_l: float, lat_r: float, y_off: float, mat: Material, closed := false) -> MeshInstance3D:
+func _ribbon(i_from: int, seg_count: int, lat_l: float, lat_r: float, y_off: float, mat: Material, closed := false, skip: Callable = Callable()) -> MeshInstance3D:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var v := 0.0
+	var last_l: Vector3
+	var last_r: Vector3
+	var has_last := false
 	for k in seg_count:
 		var i0: int = (i_from + k) % track.n
 		var i1: int = (i_from + k + 1) % track.n
-		var l0 := _row_point(i0, lat_l, y_off)
-		var r0 := _row_point(i0, lat_r, y_off)
+		if skip.is_valid() and skip.call(i0):
+			v += track.step_len[i0] * 0.08
+			has_last = false
+			continue
+		var l0 := last_l if has_last else _row_point(i0, lat_l, y_off)
+		var r0 := last_r if has_last else _row_point(i0, lat_r, y_off)
 		var l1 := _row_point(i1, lat_l, y_off)
 		var r1 := _row_point(i1, lat_r, y_off)
+		# anti-fold: inside tight corners the offset curve reverses against
+		# the direction of travel and self-intersects ("torn barrier" bug);
+		# clamp reversed rows so the strip degenerates cleanly instead
+		var tg: Vector3 = track.tangents[i0]
+		if (l1 - l0).dot(tg) < 0.0:
+			l1 = l0
+		if (r1 - r0).dot(tg) < 0.0:
+			r1 = r0
+		last_l = l1
+		last_r = r1
+		has_last = true
 		var v1: float = v + track.step_len[i0] * 0.08
 		# flat-up normals: uniform shading on climbs and descents, so the
 		# asphalt reads the same charcoal everywhere (slope-lit road looked
@@ -188,17 +219,28 @@ func _wall(i_from: int, seg_count: int, lat: float, y_bot: float, y_top: float, 
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var v := 0.0
 	var any := false
+	var last_b: Vector3
+	var last_t: Vector3
+	var has_last := false
 	for k in seg_count:
 		var i0: int = (i_from + k) % track.n
 		var i1: int = (i_from + k + 1) % track.n
 		if skip.is_valid() and skip.call(i0):
 			v += track.step_len[i0] * 0.08
+			has_last = false
 			continue
 		any = true
-		var b0 := _row_point(i0, lat, y_bot)
-		var t0 := _row_point(i0, lat, y_top)
+		var b0 := last_b if has_last else _row_point(i0, lat, y_bot)
+		var t0 := last_t if has_last else _row_point(i0, lat, y_top)
 		var b1 := _row_point(i1, lat, y_bot)
 		var t1 := _row_point(i1, lat, y_top)
+		# anti-fold (see _ribbon)
+		if (b1 - b0).dot(track.tangents[i0]) < 0.0:
+			b1 = b0
+			t1 = t0
+		last_b = b1
+		last_t = t1
+		has_last = true
 		var v1: float = v + track.step_len[i0] * 0.08
 		st.set_uv(Vector2(v, 1)); st.add_vertex(b0)
 		st.set_uv(Vector2(v1, 1)); st.add_vertex(b1)
@@ -239,21 +281,25 @@ func _build_curbs() -> void:
 			_ribbon(run_start, i - run_start, -track.HALF, -track.HALF - 4.5, 0.22, curb_mat)
 		i += 1
 
-func _pit_gap(i: int) -> bool:
-	# leave the south barrier open where the pit lane peels off / rejoins
-	var a: Vector2 = track.art[i]
-	if a.y < 575.0 or a.y > 612.0:
-		return false
-	return (a.x > 198.0 and a.x < 232.0) or (a.x > 413.0 and a.x < 447.0)
+## The main barrier opens where a branch corridor (pit / hidden path) peels
+## off or rejoins, on the branch's side only — so alternate roads pass
+## through a gap instead of intersecting the railing.
+func _branch_gap(i: int, side: float) -> bool:
+	for b in track.branches:
+		if signf(b["entry_side"]) == side and absi(track.wrap_index_diff(i, b["entry_idx"])) <= 3:
+			return true
+		if signf(b["exit_side"]) == side and absi(track.wrap_index_diff(i, b["exit_idx"])) <= 3:
+			return true
+	return false
 
 func _build_barriers() -> void:
 	var bar_mat := Pix.tex_mat(Pix.barrier())
 	var lat: float = track.HALF + 2.0
-	_wall(0, track.n, lat, 0.0, 6.0, bar_mat)
-	_wall(0, track.n, -lat, 0.0, 6.0, bar_mat, _pit_gap)
+	_wall(0, track.n, lat, 0.0, 6.0, bar_mat, _branch_gap.bind(1.0))
+	_wall(0, track.n, -lat, 0.0, 6.0, bar_mat, _branch_gap.bind(-1.0))
 	var cap_mat := Pix.flat_mat(Color(0.75, 0.76, 0.78))
-	_ribbon(0, track.n, lat + 0.7, lat - 0.7, 6.0, cap_mat, true)
-	_ribbon(0, track.n, -lat + 0.7, -lat - 0.7, 6.0, cap_mat, true)
+	_ribbon(0, track.n, lat + 0.7, lat - 0.7, 6.0, cap_mat, true, _branch_gap.bind(1.0))
+	_ribbon(0, track.n, -lat + 0.7, -lat - 0.7, 6.0, cap_mat, true, _branch_gap.bind(-1.0))
 	# retaining skirts where the road is elevated, so hills read as terraces
 	var skirt_mat := Pix.flat_mat(Color(0.42, 0.4, 0.38))
 	var i := 0
@@ -270,11 +316,17 @@ func _build_barriers() -> void:
 func _skirt(i_from: int, seg_count: int, lat: float, mat: Material) -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var last_t: Vector3
+	var has_last := false
 	for k in seg_count:
 		var i0: int = (i_from + k) % track.n
 		var i1: int = (i_from + k + 1) % track.n
-		var t0 := _row_point(i0, lat, 0.0)
+		var t0 := last_t if has_last else _row_point(i0, lat, 0.0)
 		var t1 := _row_point(i1, lat, 0.0)
+		if (t1 - t0).dot(track.tangents[i0]) < 0.0:
+			t1 = t0  # anti-fold (see _ribbon)
+		last_t = t1
+		has_last = true
 		var b0 := Vector3(t0.x, -1.0, t0.z)
 		var b1 := Vector3(t1.x, -1.0, t1.z)
 		st.set_uv(Vector2.ZERO); st.add_vertex(b0)
@@ -354,12 +406,13 @@ func _portal(i: int) -> void:
 	var stone := Pix.flat_mat(Color(0.74, 0.68, 0.56), 0.18)
 	var trim := Pix.flat_mat(Color(0.86, 0.81, 0.7), 0.2)
 	var recess := Pix.flat_mat(Color(0.12, 0.13, 0.18))
-	var lat: float = track.HALF + 4.5
+	# pillars clear of the barriers so they never read as standing on the road
+	var lat: float = track.HALF + 7.0
 	for side in [-1.0, 1.0]:
 		_portal_part(root, Vector3(5, 16, 5), Vector3(0, 8, side * lat), stone, false)
 		_portal_part(root, Vector3(6, 1.2, 6), Vector3(0, 16.6, side * lat), trim, false)
 	# dark arch recess under the lintel, then lintel band, cornice, parapet
-	_portal_part(root, Vector3(3.5, 3.0, lat * 2.0 - 4.0), Vector3(0, 12.6, 0), recess, true)
+	_portal_part(root, Vector3(3.5, 3.0, (track.HALF + 4.5) * 2.0), Vector3(0, 12.6, 0), recess, true)
 	_portal_part(root, Vector3(4.5, 4.0, (lat + 2.0) * 2.0), Vector3(0, 16, 0), stone, true)
 	_portal_part(root, Vector3(5.5, 1.4, (lat + 3.0) * 2.0), Vector3(0, 18.7, 0), trim, true)
 	_portal_part(root, Vector3(4, 2.4, 12), Vector3(0, 20.6, 0), stone, true)
