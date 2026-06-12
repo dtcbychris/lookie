@@ -208,8 +208,29 @@ static func crowd_frames(rng: RandomNumberGenerator) -> Array:
 		frames.append(_tex(img))
 	return frames
 
-static func ground() -> Texture2D:
+static func ground(style := "ground") -> Texture2D:
+	if style == "ground_moss":
+		return named_tex("ground_moss", _ground_moss_img)
 	return named_tex("ground", _ground_img)
+
+## Mossy temple-garden ground for the Japan kit (fallback generator).
+static func _ground_moss_img() -> Image:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 17
+	var img := Image.create(24, 24, false, Image.FORMAT_RGBA8)
+	for y in 24:
+		for x in 24:
+			var v := 0.3 + rng.randf() * 0.05
+			img.set_pixel(x, y, Color(v * 0.8, v, v * 0.72))
+	# stepping stones
+	for s in 5:
+		var sx := rng.randi() % 21
+		var sy := rng.randi() % 21
+		for yy in 3:
+			for xx in 3:
+				var g := 0.42 + rng.randf() * 0.04
+				img.set_pixel(sx + xx, sy + yy, Color(g, g, g * 0.95))
+	return img
 
 static func _ground_img() -> Image:
 	var rng := RandomNumberGenerator.new()

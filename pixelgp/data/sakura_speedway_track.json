@@ -64,31 +64,54 @@
       1.0, 0.6, 0.3, 0.1
     ],
     "tunnel": { "name": "WISTERIA WAY", "rects": [] },
+    "sky_top": [0.55, 0.6, 0.85],
+    "sky_horizon": [0.95, 0.8, 0.82],
+    "sun_color": [1.0, 0.9, 0.86],
+    "ground_texture": "ground_moss",
+    "light_style": "lantern",
+    "building_heights": [18, 46],
     "water": [
       {
         "name": "river", "label": "KOI RIVER", "rect": [1450, 350, 250, 850],
-        "quay": "ring", "yachts": 4, "piers_x": [1500, 1560]
+        "quay": "ring", "yachts": 4, "piers_x": [1500, 1560],
+        "deep": [0.04, 0.26, 0.32], "lite": [0.32, 0.72, 0.66], "koi": 8
       },
-      { "name": "pond", "rect": [80, 380, 140, 260], "quay": "ring" }
+      {
+        "name": "pond", "rect": [80, 380, 140, 260], "quay": "ring",
+        "deep": [0.04, 0.26, 0.32], "lite": [0.32, 0.72, 0.66], "koi": 7
+      }
     ],
     "ground": [
-      [-160, -160, 1610, 1620],
+      [-160, -160, 1610, 540],
+      [-160, 380, 240, 260],
+      [220, 380, 1230, 260],
+      [-160, 640, 1610, 820],
       [1450, -160, 450, 510],
       [1450, 1200, 450, 420],
       [1700, 350, 200, 850]
     ],
     "districts": [
-      { "name": "wood", "rect": [-160, 850, 1260, 710] },
+      { "name": "wood", "rect": [-160, 850, 2060, 710] },
       { "name": "garden", "rect": [-160, -160, 860, 1010] }
     ],
-    "district_default": "center",
+    "district_default": "wood",
     "exclusions": [[620, 1140, 370, 60]],
     "city_rect": [-140, -140, 1880, 1560],
     "tree_rect": [-150, -150, 1900, 1580],
     "tree_palette": [[0.95, 0.7, 0.8], [0.98, 0.82, 0.88], [0.88, 0.55, 0.68], [0.3, 0.5, 0.3]],
-    "petals": { "count": 64, "rect": [150, 150, 1400, 1150] },
+    "tree_style": "sakura",
+    "tree_skip": 0.55,
+    "tree_rows": [
+      { "from": [480, 1128], "to": [1060, 1128], "step": 46 },
+      { "from": [520, 360], "to": [1180, 360], "step": 46 },
+      { "from": [540, 258], "to": [1140, 258], "step": 50 },
+      { "from": [322, 560], "to": [322, 900], "step": 48 },
+      { "from": [1282, 450], "to": [1282, 1000], "step": 50 },
+      { "from": [480, 1255], "to": [1080, 1255], "step": 52 }
+    ],
+    "petals": { "count": 120, "size": 2.6, "rect": [200, 200, 1300, 1100] },
     "palm_rows": [],
-    "umbrella_row": { "from": [1300, 500], "to": [1300, 900], "step": 60 },
+    "umbrella_row": { "from": [1310, 520], "to": [1310, 760], "step": 60 },
     "umbrella_scatter": 12,
     "grandstands": [
       { "at": [800, 1240], "length": 300, "facing": 0 },
@@ -97,6 +120,7 @@
     ],
     "landmarks": [
       { "type": "torii", "at": [150, 510] },
+      { "type": "bridge", "at": [150, 600], "span": 150 },
       { "type": "pagoda", "at": [850, 195] },
       { "type": "hotel", "at": [620, 1265], "sign": "SAKURA GRAND" }
     ]

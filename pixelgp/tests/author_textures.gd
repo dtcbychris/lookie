@@ -20,12 +20,16 @@ func _initialize() -> void:
 		"harbor": [Color(0.9, 0.74, 0.72), Color(0.88, 0.84, 0.74), Color(0.72, 0.8, 0.84), Color(0.74, 0.85, 0.76)],
 		"casino": [Color(0.92, 0.89, 0.8), Color(0.95, 0.92, 0.86), Color(0.88, 0.82, 0.66), Color(0.92, 0.89, 0.8)],
 		"center": [Color(0.85, 0.78, 0.66), Color(0.75, 0.72, 0.62), Color(0.8, 0.76, 0.72), Color(0.7, 0.66, 0.6)],
+		"wood": [Color(0.42, 0.3, 0.22), Color(0.5, 0.36, 0.26), Color(0.36, 0.26, 0.2), Color(0.55, 0.42, 0.3)],
+		"garden": [Color(0.9, 0.88, 0.82), Color(0.85, 0.84, 0.78), Color(0.8, 0.78, 0.7), Color(0.88, 0.85, 0.76)],
 	}
 	var awnings := {
 		"oldtown": [Color(0.25, 0.5, 0.3), Color(0.8, 0.45, 0.15)],
 		"harbor": [Color(0.8, 0.2, 0.18), Color(0.15, 0.5, 0.6)],
 		"casino": [Color(0.7, 0.5, 0.15), Color(0.45, 0.12, 0.2)],
 		"center": [Color(0.3, 0.35, 0.5), Color(0.55, 0.25, 0.25)],
+		"wood": [Color(0.75, 0.18, 0.15), Color(0.2, 0.25, 0.4)],
+		"garden": [Color(0.65, 0.15, 0.15), Color(0.25, 0.4, 0.35)],
 	}
 	for district in walls.keys():
 		for idx in 4:
@@ -160,12 +164,25 @@ func _facade(district: String, base: Color, awning_colors: Array) -> Image:
 	# roof trim
 	_rect(img, 0, 0, w, 1, base.darkened(0.35))
 	_rect(img, 0, 1, w, 1, base.lightened(0.18))
-	# corner quoins
-	for y in range(2, h - 12, 3):
-		var on := (y / 3) % 2 == 0
-		if on:
-			_rect(img, 0, y, 2, 3, base.lightened(0.12))
-			_rect(img, w - 2, y, 2, 3, base.lightened(0.12))
+	if district == "wood":
+		# machiya timber framing: vertical posts and floor beams
+		for x in range(0, w, 4):
+			_rect(img, x, 2, 1, h - 4, base.darkened(0.3))
+		for f in 4:
+			_rect(img, 0, 2 + f * 8, w, 1, base.darkened(0.4))
+	elif district == "garden":
+		# white plaster with dark timber border frame
+		_rect(img, 0, 2, 1, h - 2, Color(0.3, 0.24, 0.2))
+		_rect(img, w - 1, 2, 1, h - 2, Color(0.3, 0.24, 0.2))
+		for f in 4:
+			_rect(img, 0, 10 + f * 8, w, 1, Color(0.3, 0.24, 0.2))
+	# corner quoins (western quarters only)
+	if district != "wood" and district != "garden":
+		for y in range(2, h - 12, 3):
+			var on := (y / 3) % 2 == 0
+			if on:
+				_rect(img, 0, y, 2, 3, base.lightened(0.12))
+				_rect(img, w - 2, y, 2, 3, base.lightened(0.12))
 	# four window floors
 	for f in 4:
 		var fy := 3 + f * 8
@@ -179,7 +196,7 @@ func _facade(district: String, base: Color, awning_colors: Array) -> Image:
 		for k in 6:
 			var px := 1 + k * 6
 			_rect(img, px, 3, 1, 32, base.lightened(0.15))
-	_storefront(img, base, awning_colors)
+	_storefront(img, district, base, awning_colors)
 	return img
 
 func _window(img: Image, district: String, base: Color, awning_colors: Array, x: int, y: int) -> void:
@@ -211,15 +228,32 @@ func _window(img: Image, district: String, base: Color, awning_colors: Array, x:
 			_rect(img, x, y, 4, 7, Color(0.78, 0.62, 0.3))  # gold frame
 			_rect(img, x + 1, y + 1, 2, 5, glass)
 			img.set_pixel(x + 1, y + 1, glass.lightened(0.2))
+		"wood":
+			# wide shoji screens with a warm paper glow and lattice
+			var paper := Color(0.95, 0.85, 0.6) if rng.randf() < 0.5 else Color(0.55, 0.48, 0.38)
+			_rect(img, x - 1, y + 1, 6, 5, paper)
+			for lx in range(x - 1, x + 5, 2):
+				_rect(img, lx, y + 1, 1, 5, paper.darkened(0.35))
+			_rect(img, x - 1, y + 3, 6, 1, paper.darkened(0.35))
+		"garden":
+			_rect(img, x, y + 1, 4, 5, Color(0.3, 0.24, 0.2))
+			_rect(img, x + 1, y + 2, 2, 3, glass)
 		_:
 			_rect(img, x, y, 4, 6, base.darkened(0.3))
 			_rect(img, x + 1, y + 1, 2, 4, glass)
 			_rect(img, x, y + 6, 4, 1, base.lightened(0.2))  # sill
 
-func _storefront(img: Image, base: Color, awning_colors: Array) -> void:
+func _storefront(img: Image, district: String, base: Color, awning_colors: Array) -> void:
 	var w := 32
-	# scalloped awning band
-	if not awning_colors.is_empty():
+	if district == "wood" or district == "garden":
+		# noren curtain: hanging split flaps over the entrance
+		var nc: Color = awning_colors[rng.randi() % awning_colors.size()]
+		for x in w:
+			img.set_pixel(x, 35, nc)
+			if (x / 3) % 2 == 0:
+				img.set_pixel(x, 36, nc.darkened(0.1))
+	elif not awning_colors.is_empty():
+		# scalloped awning band
 		var ac: Color = awning_colors[rng.randi() % awning_colors.size()]
 		for x in w:
 			img.set_pixel(x, 35, ac if (x / 2) % 2 == 0 else Color(0.93, 0.92, 0.88))

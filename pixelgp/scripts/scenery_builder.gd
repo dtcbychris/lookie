@@ -142,8 +142,11 @@ func build(p_track) -> void:
 				_build_torii(lm)
 			"pagoda":
 				_build_pagoda(lm)
+			"bridge":
+				_build_bridge(lm)
 	_build_petals()
 	_build_trees()
+	_build_tree_rows()
 	_build_grandstands()
 	_build_trackside_crowds()
 	_build_palms()
@@ -172,6 +175,13 @@ func _process(_delta: float) -> void:
 		y.position.y = -3.2 + sin(t * 1.2 + float(i)) * 0.3
 	if _casino_sign:
 		_casino_sign.modulate.a = 0.75 + 0.25 * sin(t * 4.0)
+	for kd in _koi:
+		var kn: MeshInstance3D = kd["node"]
+		var ang: float = t * kd["speed"] + kd["phase"]
+		var ctr: Vector2 = kd["center"]
+		kn.position.x = ctr.x + cos(ang) * kd["radius"]
+		kn.position.z = ctr.y + sin(ang) * kd["radius"]
+		kn.rotation.y = -ang - (PI / 2.0 if kd["speed"] > 0.0 else -PI / 2.0)
 	for pd in _petals:
 		var node: MeshInstance3D = pd["node"]
 		node.position.y -= pd["fall"] * _delta
@@ -231,14 +241,20 @@ func _ground_piece(r: Rect2, mat: Material) -> void:
 	_box(Vector3(size.x, 1.0, size.y), Vector3(center.x, -1.1, center.y), mat)
 
 func _build_ground_and_water() -> void:
-	var gmat := Pix.tex_mat(Pix.ground())
+	var gmat := Pix.tex_mat(Pix.ground(_kit.get("ground_texture", "ground")))
 	gmat.uv1_scale = Vector3(40, 40, 1)
 	for g in _kit.get("ground", []):
 		_ground_piece(Rect2(g[0], g[1], g[2], g[3]), gmat)
-	var wmat := Pix.water_material()
 	var quay := Pix.flat_mat(Color(0.55, 0.52, 0.47))
 	for z in _water_zones:
 		var r: Rect2 = z["rect"]
+		var wmat := Pix.water_material()
+		if z.has("deep"):
+			var dc: Array = z["deep"]
+			wmat.set_shader_parameter("deep", Color(dc[0], dc[1], dc[2]))
+		if z.has("lite"):
+			var lc: Array = z["lite"]
+			wmat.set_shader_parameter("lite", Color(lc[0], lc[1], lc[2]))
 		var mi := MeshInstance3D.new()
 		var pm := PlaneMesh.new()
 		pm.size = r.size * track.WORLD_SCALE
@@ -256,6 +272,17 @@ func _build_ground_and_water() -> void:
 			_box(Vector3(4, 6, r.size.y * 2), Vector3(r.end.x * 2, -2, c.y), quay)
 		if z.has("label"):
 			_label(z["label"], Vector3(c.x, 8, r.position.y * 2 + 6), Vector3(0, 0, -1), Color(0.4, 0.8, 1.0), 56, 0.1)
+		# koi drifting in slow circles
+		for k in int(z.get("koi", 0)):
+			var koi := _box(Vector3(2.6, 0.4, 1.1),
+				Vector3(c.x, -3.55, c.y), Pix.flat_mat(Color(0.95, 0.45, 0.15) if k % 3 != 0 else Color(0.93, 0.9, 0.88), 0.25))
+			_koi.append({
+				"node": koi,
+				"center": Vector2(c.x + _rng.randf_range(-r.size.x * 0.6, r.size.x * 0.6), c.y + _rng.randf_range(-r.size.y * 0.6, r.size.y * 0.6)),
+				"radius": _rng.randf_range(8.0, 22.0),
+				"phase": _rng.randf_range(0, TAU),
+				"speed": _rng.randf_range(0.25, 0.5) * (1.0 if k % 2 == 0 else -1.0),
+			})
 
 # --- per-zone water features (piers, berthed/drifting yachts, buoys) -----------
 
@@ -353,7 +380,8 @@ func _build_city() -> void:
 					break
 			if reserved:
 				continue
-			var h := _rng.randf_range(28, 95)
+			var hr: Array = _kit.get("building_heights", [28, 95])
+			var h := _rng.randf_range(hr[0], hr[1])
 			# hillside city: building tops must clear nearby elevated roads
 			var ni: int = track.nearest_index_hint(p.x, p.y, 0, 0, track.n - 1)
 			h = maxf(h, track.samples[ni].y + 24.0)
@@ -417,7 +445,7 @@ func _build_trees() -> void:
 		var ay: float = tr[1]
 		while ay < tr[1] + tr[3]:
 			ay += 24.0
-			if _rng.randf() < 0.7:
+			if _rng.randf() < float(_kit.get("tree_skip", 0.7)):
 				continue
 			var a := Vector2(ax + _rng.randf_range(-8, 8), ay + _rng.randf_range(-8, 8))
 			if _in_water_art(a) or _excluded(a):
@@ -447,6 +475,48 @@ func _tree(pos: Vector3, s: float, trunk_mat: Material, crown_mat: Material) -> 
 	crown.material_override = crown_mat
 	crown.position = Vector3(0, 4.6 * s, 0)
 	trunk.add_child(crown)
+	if _kit.get("tree_style", "") == "sakura":
+		# fluffy double crown, blossom-season silhouette
+		var puff := MeshInstance3D.new()
+		var pm := SphereMesh.new()
+		pm.radius = 3.0 * s
+		pm.height = 4.0 * s
+		pm.radial_segments = 6
+		pm.rings = 3
+		puff.mesh = pm
+		puff.material_override = crown_mat
+		puff.position = Vector3(2.4 * s, 6.4 * s, 1.2 * s)
+		trunk.add_child(puff)
+
+## Rows of feature trees lining the track (sakura avenues, etc) — like palm
+## rows but using the track's tree palette at hero scale.
+func _build_tree_rows() -> void:
+	_rng.seed = 15
+	var palette: Array = _kit.get("tree_palette", [])
+	if palette.is_empty() or not _kit.has("tree_rows"):
+		return
+	var crown_mats: Array = []
+	for c in palette:
+		crown_mats.append(Pix.flat_mat(Color(c[0], c[1], c[2])))
+	var trunk_mat := Pix.flat_mat(Color(0.36, 0.26, 0.2))
+	for row in _kit.get("tree_rows", []):
+		var a := Vector2(row["from"][0], row["from"][1])
+		var b := Vector2(row["to"][0], row["to"][1])
+		var count := int(a.distance_to(b) / float(row["step"]))
+		for k in count + 1:
+			var spot := a.lerp(b, float(k) / maxf(count, 1))
+			if _in_water_art(spot) or _excluded(spot):
+				continue
+			var p := _w(spot.x, spot.y)
+			if track.min_dist_to_track(p.x, p.y) < track.HALF + 8.0:
+				continue
+			var blocked := false
+			for r in _building_rects:
+				if r.grow(2.0).has_point(spot):
+					blocked = true
+					break
+			if not blocked:
+				_tree(Vector3(p.x, 0, p.y), _rng.randf_range(1.1, 1.55), trunk_mat, crown_mats[_rng.randi() % crown_mats.size()])
 
 ## Crowd strips along the outside barriers at corners — race-day atmosphere
 ## beyond the three big grandstands.
@@ -851,9 +921,31 @@ func _build_pagoda(lm: Dictionary) -> void:
 		w *= 0.82
 	_box(Vector3(1.4, 9, 1.4), Vector3(cx, y + 4.0, cz), Pix.flat_mat(Color(0.85, 0.68, 0.28), 0.4))
 
+## Arched vermilion footbridge (spans east-west across ponds/streams).
+func _build_bridge(lm: Dictionary) -> void:
+	var cx: float = lm["at"][0] * 2.0
+	var cz: float = lm["at"][1] * 2.0
+	var span: float = lm.get("span", 120.0) * 2.0
+	var verm := Pix.flat_mat(Color(0.82, 0.22, 0.12))
+	var wood := Pix.flat_mat(Color(0.45, 0.32, 0.22))
+	var segs := 7
+	for k in segs:
+		var t01 := (float(k) + 0.5) / segs - 0.5  # -0.5..0.5
+		var x := cx + t01 * span
+		var y := 1.0 + (1.0 - 4.0 * t01 * t01) * 5.0  # arch profile
+		_box(Vector3(span / segs + 1.0, 1.2, 10), Vector3(x, y, cz), wood)
+		for side in [-1.0, 1.0]:
+			_box(Vector3(span / segs + 1.0, 0.7, 0.7), Vector3(x, y + 3.4, cz + side * 4.6), verm)
+			if k % 2 == 0:
+				_box(Vector3(0.7, 3.2, 0.7), Vector3(x, y + 1.8, cz + side * 4.6), verm)
+	for ex in [-0.5, 0.5]:
+		_box(Vector3(1.4, 8, 1.4), Vector3(cx + ex * span, 2.5, cz - 4.6), verm)
+		_box(Vector3(1.4, 8, 1.4), Vector3(cx + ex * span, 2.5, cz + 4.6), verm)
+
 ## Falling cherry-blossom petals — the track's signature animated system,
 ## driven by the kit's "petals" config.
 var _petals: Array = []  # {"node": MeshInstance3D, "phase": float, "fall": float}
+var _koi: Array = []     # {"node", "center", "radius", "phase", "speed"}
 
 func _build_petals() -> void:
 	if not _kit.has("petals"):
@@ -863,10 +955,11 @@ func _build_petals() -> void:
 	var r: Array = pk["rect"]
 	var pmat := Pix.flat_mat(Color(0.97, 0.78, 0.86), 0.25)
 	pmat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var psize: float = pk.get("size", 2.4)
 	for k in int(pk.get("count", 60)):
 		var quad := MeshInstance3D.new()
 		var qm := QuadMesh.new()
-		qm.size = Vector2(1.3, 1.3)
+		qm.size = Vector2(psize, psize)
 		quad.mesh = qm
 		quad.material_override = pmat
 		quad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -1057,8 +1150,10 @@ func _build_billboards() -> void:
 			_box(Vector3(6, 2.2, 3), base + Vector3(_rng.randf_range(-1, 1), 1.1 + s * 2.2, _rng.randf_range(-1, 1)), tire)
 
 func _build_streetlights() -> void:
-	var pole_mat := Pix.flat_mat(Color(0.25, 0.26, 0.3))
-	var lamp_mat := Pix.flat_mat(Color(1.0, 0.92, 0.7), 1.6)
+	var lantern: bool = _kit.get("light_style", "") == "lantern"
+	var pole_mat := Pix.flat_mat(Color(0.3, 0.2, 0.14) if lantern else Color(0.25, 0.26, 0.3))
+	var lamp_mat := Pix.flat_mat(Color(0.95, 0.3, 0.18), 1.4) if lantern else Pix.flat_mat(Color(1.0, 0.92, 0.7), 1.6)
+	var cap_mat := Pix.flat_mat(Color(0.28, 0.3, 0.38))
 	var i := 0
 	while i < track.n:
 		if not track.in_tunnel(i) and (i / 14) % 3 != 2:
@@ -1066,8 +1161,14 @@ func _build_streetlights() -> void:
 			var pos: Vector3 = track.samples[i] + track.normals[i] * (track.HALF + 6.5) * side
 			var a: Vector2 = track.art[i] + Vector2(track.normals[i].x, track.normals[i].z) * 16.0 * side
 			if not _in_water_art(a) and track.min_dist_to_track(pos.x, pos.z) > track.HALF + 4.0:
-				_box(Vector3(0.7, 10, 0.7), pos + Vector3(0, 5, 0), pole_mat)
-				_box(Vector3(1.8, 1.2, 1.8), pos + Vector3(0, 10.5, 0), lamp_mat)
+				if lantern:
+					# red paper lanterns on timber posts
+					_box(Vector3(0.8, 7, 0.8), pos + Vector3(0, 3.5, 0), pole_mat)
+					_box(Vector3(2.2, 2.8, 2.2), pos + Vector3(0, 8.2, 0), lamp_mat)
+					_box(Vector3(3.0, 0.6, 3.0), pos + Vector3(0, 9.8, 0), cap_mat)
+				else:
+					_box(Vector3(0.7, 10, 0.7), pos + Vector3(0, 5, 0), pole_mat)
+					_box(Vector3(1.8, 1.2, 1.8), pos + Vector3(0, 10.5, 0), lamp_mat)
 		i += 14
 
 # --- pit lane (decorative for the first playable) --------------------------------

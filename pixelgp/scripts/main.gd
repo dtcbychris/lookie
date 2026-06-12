@@ -43,7 +43,6 @@ func _ready() -> void:
 	var world := Node3D.new()
 	world.name = "World"
 	sv.add_child(world)
-	_setup_environment(world)
 
 	# dev hook: runners select a track via env without touching the session
 	var env_track := OS.get_environment("PIXELGP_TRACK")
@@ -51,6 +50,7 @@ func _ready() -> void:
 		TrackData.selected_path = env_track
 	var track := TrackData.new()
 	track.load_track(TrackData.selected_path)
+	_setup_environment(world, track.scenery)
 
 	var track_builder: Node3D = TrackBuilder.new()
 	world.add_child(track_builder)
@@ -143,13 +143,20 @@ void fragment() {
 	m.shader = sh
 	return m
 
-func _setup_environment(world: Node3D) -> void:
+func _kit_color(kit: Dictionary, key: String, fallback: Color) -> Color:
+	if kit.has(key):
+		var c: Array = kit[key]
+		return Color(c[0], c[1], c[2])
+	return fallback
+
+## Sky and sun come from the track kit (each circuit has its own light).
+func _setup_environment(world: Node3D, kit: Dictionary) -> void:
 	var env := Environment.new()
 	var sky_mat := ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = Color(0.3, 0.5, 0.85)
-	sky_mat.sky_horizon_color = Color(0.85, 0.78, 0.68)
+	sky_mat.sky_top_color = _kit_color(kit, "sky_top", Color(0.3, 0.5, 0.85))
+	sky_mat.sky_horizon_color = _kit_color(kit, "sky_horizon", Color(0.85, 0.78, 0.68))
 	sky_mat.ground_bottom_color = Color(0.2, 0.3, 0.45)
-	sky_mat.ground_horizon_color = Color(0.85, 0.78, 0.68)
+	sky_mat.ground_horizon_color = sky_mat.sky_horizon_color
 	var sky := Sky.new()
 	sky.sky_material = sky_mat
 	env.background_mode = Environment.BG_SKY
@@ -163,7 +170,7 @@ func _setup_environment(world: Node3D) -> void:
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-52, 35, 0)
 	sun.light_energy = 1.05
-	sun.light_color = Color(1.0, 0.92, 0.78)
+	sun.light_color = _kit_color(kit, "sun_color", Color(1.0, 0.92, 0.78))
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 900.0
 	world.add_child(sun)
