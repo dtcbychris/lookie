@@ -51,10 +51,10 @@ func _asphalt() -> Image:
 	var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
 	for y in 64:
 		for x in 64:
-			var v := 0.052 + rng.randf() * 0.018
+			var v := 0.055 + rng.randf() * 0.01
 			img.set_pixel(x, y, Color(v, v, v * 1.12))
 	# repair patches
-	for p in 5:
+	for p in 4:
 		var px := rng.randi() % 56
 		var py := rng.randi() % 56
 		var pw := 6 + rng.randi() % 14
@@ -73,7 +73,7 @@ func _asphalt() -> Image:
 			cx += rng.randi() % 3 - 1
 			cy += 1
 	# sparse light speckle
-	for s in 60:
+	for s in 20:
 		var sx := rng.randi() % 64
 		var sy := rng.randi() % 64
 		var c2 := img.get_pixel(sx, sy)
@@ -93,27 +93,25 @@ func _asphalt() -> Image:
 func _ground() -> Image:
 	rng.seed = 102
 	var img := Image.create(48, 48, false, Image.FORMAT_RGBA8)
-	var grout := Color(0.3, 0.28, 0.24)
+	# calm promenade paving: subtle grout, gentle tone variance (the original
+	# high-contrast pave grid read as noise from the race camera)
+	var grout := Color(0.37, 0.345, 0.3)
 	for y in 48:
 		for x in 48:
 			if x % 8 == 0 or y % 8 == 0:
-				img.set_pixel(x, y, grout.lightened(rng.randf() * 0.06))
+				img.set_pixel(x, y, grout)
 			else:
-				var v := 0.4 + rng.randf() * 0.05
+				var v := 0.41 + rng.randf() * 0.028
 				img.set_pixel(x, y, Color(v, v * 0.92, v * 0.78))
-	# per-stone shading + occasional cool stone
 	for sy in 6:
 		for sx in 6:
-			var ox := sx * 8 + 1
-			var oy := sy * 8 + 1
-			if rng.randf() < 0.18:
+			if rng.randf() < 0.12:
+				var ox := sx * 8 + 1
+				var oy := sy * 8 + 1
 				for yy in range(oy, oy + 7):
 					for xx in range(ox, ox + 7):
 						var c := img.get_pixel(xx, yy)
-						img.set_pixel(xx, yy, Color(c.r * 0.92, c.g * 0.95, c.b * 1.05))
-			for k in 7:
-				img.set_pixel(ox + k, oy, img.get_pixel(ox + k, oy).lightened(0.12))
-				img.set_pixel(ox + k, oy + 6, img.get_pixel(ox + k, oy + 6).darkened(0.14))
+						img.set_pixel(xx, yy, Color(c.r * 0.96, c.g * 0.97, c.b * 1.02))
 	return img
 
 func _curb() -> Image:

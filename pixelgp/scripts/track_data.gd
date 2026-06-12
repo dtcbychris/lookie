@@ -92,13 +92,15 @@ func load_track(path := "res://data/harbor_crown_track.json") -> void:
 
 ## Branches: alternate corridors (pit lane, hidden shortcuts). Same clamp
 ## physics as the main road, linear instead of looped; entry/exit anchored to
-## the nearest main-line samples.
+## the nearest main-line samples. Control points are sampled through an open
+## Catmull-Rom so corridors curve as smoothly as the circuit itself.
 func _build_branches_data(data: Dictionary) -> void:
 	branches.clear()
 	for bd in data.get("branches", []):
-		var pts := PackedVector3Array()
+		var ctrl: Array[Vector3] = []
 		for p in bd["points"]:
-			pts.append(Vector3(p[0] * WORLD_SCALE, 0.8, p[1] * WORLD_SCALE))
+			ctrl.append(Vector3(p[0] * WORLD_SCALE, 0.8, p[1] * WORLD_SCALE))
+		var pts := _smooth_open(ctrl, 6)
 		var seg_dir := PackedVector3Array()
 		var seg_norm := PackedVector3Array()
 		var cum := PackedFloat32Array()
@@ -118,6 +120,7 @@ func _build_branches_data(data: Dictionary) -> void:
 		branches.append({
 			"name": bd["name"],
 			"type": bd["type"],
+			"gated": bool(bd.get("gated", false)),
 			"half": float(bd["half_width"]),
 			"cap": float(bd["speed_cap"]),
 			"pts": pts,
@@ -129,6 +132,20 @@ func _build_branches_data(data: Dictionary) -> void:
 			"exit_idx": exit_idx,
 			"entry_side": entry_side,
 		})
+
+## Open Catmull-Rom: clamped ends (first/last control duplicated).
+static func _smooth_open(ctrl: Array[Vector3], per_seg: int) -> PackedVector3Array:
+	var out := PackedVector3Array()
+	var m := ctrl.size()
+	for i in m - 1:
+		var p0 := ctrl[maxi(i - 1, 0)]
+		var p1 := ctrl[i]
+		var p2 := ctrl[i + 1]
+		var p3 := ctrl[mini(i + 2, m - 1)]
+		for s in per_seg:
+			out.append(_catmull(p0, p1, p2, p3, float(s) / per_seg))
+	out.append(ctrl[m - 1])
+	return out
 
 static func _catmull(p0: Vector3, p1: Vector3, p2: Vector3, p3: Vector3, t: float) -> Vector3:
 	var t2 := t * t

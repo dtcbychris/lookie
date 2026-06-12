@@ -26,6 +26,7 @@ var _toast_t := 0.0
 var _flash: ColorRect
 var _impact_seen := -10.0
 var _pit_seen := -10.0
+var _gate_toasted := false
 var _slip: Label
 var _race_ui: Array[CanvasItem] = []
 var _menu_ui: Array[CanvasItem] = []
@@ -202,6 +203,9 @@ func _process(_dt: float) -> void:
 	if car.pit_stamp > _pit_seen:
 		_pit_seen = car.pit_stamp
 		toast("PIT SERVICE - BOOST REFILLED")
+	if race.gate_open_stamp >= 0.0 and not _gate_toasted:
+		_gate_toasted = true
+		toast("A GATE ON THE WEST PROMENADE SLID OPEN...")
 	_slip.visible = car.slipstreaming and race.state == RM.State.RACING
 	_toast_t = maxf(_toast_t - _dt, 0.0)
 	_toast.modulate.a = clampf(_toast_t * 2.0, 0.0, 1.0)

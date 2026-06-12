@@ -22,6 +22,8 @@ const AI_LANES := [-5.0, 5.0, -5.0]
 
 var _cam: Camera3D
 var _hud: CanvasLayer
+var _race: Node
+var _tb: Node3D
 
 func _ready() -> void:
 	ControlPresets.load_settings()
@@ -49,6 +51,7 @@ func _ready() -> void:
 	var track_builder: Node3D = TrackBuilder.new()
 	world.add_child(track_builder)
 	track_builder.build(track)
+	_tb = track_builder
 
 	var scenery: Node3D = SceneryBuilder.new()
 	world.add_child(scenery)
@@ -62,6 +65,7 @@ func _ready() -> void:
 	race.name = "RaceManager"
 	race.track = track
 	add_child(race)
+	_race = race
 
 	# grid: 3 AI ahead, player starts P4 — overtaking is the fantasy
 	var team_colors: Array = []
@@ -104,6 +108,8 @@ func _ready() -> void:
 	audio.setup(race)
 
 func _process(_dt: float) -> void:
+	if _tb and _race:
+		_tb.update_gate(_race.hidden_gate_open(), _dt)
 	if Input.is_action_just_pressed("controls_preset"):
 		var p: Dictionary = ControlPresets.cycle_preset()
 		_hud.toast("CONTROLS: %s  (%s)" % [p["name"], p["desc"]])
@@ -112,24 +118,19 @@ func _process(_dt: float) -> void:
 		ControlPresets.set_camera(_cam.mode)
 		_hud.toast("CAMERA: %s" % ("SHOWCASE" if _cam.mode == 1 else "RACE"))
 
-## Retro palette pass over the whole 640x360 frame: saturation boost, ordered
-## 2x2 dither, and per-channel posterization. "Everything is 3D, viewed
-## through a pixel lens."
+## Retro palette pass over the whole 640x360 frame: saturation boost and
+## per-channel posterization. (Ordered dithering removed after playtest —
+## the grain read as noise, not style.)
 func _palette_material() -> ShaderMaterial:
 	var sh := Shader.new()
 	sh.code = """
 shader_type canvas_item;
-uniform float levels = 7.0;
-uniform float saturation = 1.2;
+uniform float levels = 8.0;
+uniform float saturation = 1.18;
 void fragment() {
 	vec4 c = texture(TEXTURE, UV);
 	float g = dot(c.rgb, vec3(0.299, 0.587, 0.114));
 	c.rgb = clamp(mix(vec3(g), c.rgb, saturation), 0.0, 1.0);
-	vec2 grid = floor(UV * vec2(640.0, 360.0));
-	float bx = mod(grid.x, 2.0);
-	float by = mod(grid.y, 2.0);
-	float bayer = bx * 2.0 + by * (3.0 - 4.0 * bx);  // 2x2 ordered dither
-	c.rgb += (bayer / 3.0 - 0.5) * (0.4 / levels);
 	c.rgb = floor(c.rgb * levels + 0.5) / levels;
 	COLOR = c;
 }

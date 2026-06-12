@@ -18,6 +18,14 @@ var positions: Array = []  # car indices, best first
 var player_finish_pos := 0
 var _brake_ramp := 0.0
 
+# hidden-path gate: opens for lap 2 only, closes forever after one use —
+# miss the window and it's gone (Mario Kart rules)
+var hidden_used := false
+var gate_open_stamp := -10.0
+
+func hidden_gate_open() -> bool:
+	return state == State.RACING and not hidden_used and cars[player_index].lap == 1
+
 func _physics_process(dt: float) -> void:
 	if Input.is_action_just_pressed("restart"):
 		get_tree().reload_current_scene()
@@ -47,6 +55,11 @@ func _physics_process(dt: float) -> void:
 		cars[i].step(dt, t, input)
 		nodes[i].sync(cars[i], track)
 	CarPhysics.resolve_contacts(cars)
+	var pc = cars[player_index]
+	if pc.branch != null and pc.branch["type"] == "hidden":
+		hidden_used = true  # one shot
+	if hidden_gate_open() and gate_open_stamp < 0.0:
+		gate_open_stamp = race_time
 	_update_positions()
 	if state == State.RACING and cars[player_index].finished:
 		state = State.FINISHED
@@ -76,6 +89,7 @@ func _player_input() -> Dictionary:
 		"boost": Input.is_action_pressed("boost"),
 		"vmax_scale": 1.09 if slip else 1.0,
 		"branches": true,  # only the player may take pit lane / hidden paths
+		"hidden_ok": hidden_gate_open(),
 	}
 
 func _update_positions() -> void:

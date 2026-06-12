@@ -45,6 +45,7 @@ var branch_seg := 0
 var branch_s := 0.0
 var pit_stamp := -10.0  # race time of last pit boost refill (for HUD/audio)
 var _pit_refilled := false
+var _hidden_ok := false  # gate state, set from input each step
 var braking := false
 var wall_hit := false
 var impact_stamp := -10.0  # race time of last wall impact (for fx/audio)
@@ -127,6 +128,7 @@ func step(dt: float, t_now: float, input: Dictionary) -> void:
 	_update_checkpoints(t_now)
 	_update_wrong_way()
 	if bool(input.get("branches", false)):
+		_hidden_ok = bool(input.get("hidden_ok", false))
 		_check_branch_entry()
 
 ## Branch corridors (pit / hidden paths): same wall-clamp model as the main
@@ -134,12 +136,18 @@ func step(dt: float, t_now: float, input: Dictionary) -> void:
 ## checkpoints, and positions keep working while off the main line.
 func _check_branch_entry() -> void:
 	for b in track.branches:
+		if b["gated"] and not _hidden_ok:
+			continue  # gate is closed: corridor is sealed
 		if absf(track.wrap_index_diff(idx, b["entry_idx"])) > 12:
 			continue
 		var p0: Vector3 = b["pts"][0]
-		if (pos.x - p0.x) ** 2 + (pos.z - p0.z) ** 2 > (b["half"] + 4.0) ** 2:
+		if (pos.x - p0.x) ** 2 + (pos.z - p0.z) ** 2 > (b["half"] + 3.0) ** 2:
 			continue
-		# require deliberately steering off-line toward the branch side
+		# must be moving INTO the corridor, not just brushing past its mouth
+		var d0: Vector3 = b["seg_dir"][0]
+		if cos(move_dir) * d0.x + sin(move_dir) * d0.z < 0.5:
+			continue
+		# and deliberately steered off-line toward the branch side
 		var sp: Vector3 = track.samples[idx]
 		var nrm: Vector3 = track.normals[idx]
 		var lat := (pos.x - sp.x) * nrm.x + (pos.z - sp.z) * nrm.z
@@ -172,6 +180,13 @@ func _step_branch(dt: float, t_now: float) -> void:
 	var dir: Vector3 = b["seg_dir"][branch_seg]
 	var nrm: Vector3 = b["seg_norm"][branch_seg]
 	var along := (pos.x - a.x) * dir.x + (pos.z - a.z) * dir.z
+	# backed out of the mouth: release to the main road, or the corridor
+	# clamp would drag the car along the alley's infinite extension
+	if branch_seg == 0 and along < -1.0:
+		branch = null
+		idx = b["entry_idx"]
+		prev_idx = idx
+		return
 	branch_s = b["cum"][branch_seg] + maxf(along, 0.0)
 	# lateral clamp with the usual angle-scaled wall penalty
 	var lat := (pos.x - a.x) * nrm.x + (pos.z - a.z) * nrm.z

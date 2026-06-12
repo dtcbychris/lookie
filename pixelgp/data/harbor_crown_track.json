@@ -318,21 +318,22 @@
     "AZURE BAY MARINA",
     "RIVIERA RACING LEAGUE"
   ],
-  "branches_comment": "alternate corridors off the main centerline (art px). 'pit' refills boost at a speed cost; 'hidden' is an ungated player-knowledge shortcut (not on minimap). Entry requires deliberately steering off-line.",
+  "branches_comment": "alternate corridors off the main centerline (art px), sampled through Catmull-Rom like the main track. 'pit' refills boost at a speed cost. 'gated' corridors are sealed behind a physical gate that the race director opens once (lap 2 only, single use) - miss it and it's gone.",
   "branches": [
     {
       "name": "pit",
       "type": "pit",
       "half_width": 7,
       "speed_cap": 80,
-      "points": [[211, 596], [243, 601], [420, 601], [439, 593]]
+      "points": [[211, 596], [228, 600], [300, 601], [380, 601], [422, 600], [439, 593]]
     },
     {
       "name": "quayside_cut",
       "type": "hidden",
+      "gated": true,
       "half_width": 7,
       "speed_cap": 110,
-      "points": [[213, 634], [187, 650], [184, 706], [212, 740], [247, 747]]
+      "points": [[213, 634], [197, 646], [187, 668], [186, 700], [199, 727], [224, 742], [247, 747]]
     }
   ],
   "set_dressing_comment": "hand-placed composition layer; art-px coords, facing in degrees (0=+x east, 90=+z south). Rendered by scripts/set_dressing.gd prop library.",

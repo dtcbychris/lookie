@@ -66,7 +66,7 @@ func _build_branches() -> void:
 		# low side walls per segment, openings at both ends
 		var wall_mat: StandardMaterial3D = pit_wall_mat if b["type"] == "pit" else hedge_mat
 		var wall_h := 2.6 if b["type"] == "pit" else 3.4
-		for s in range(1, pts.size() - 2):
+		for s in range(2, pts.size() - 4):
 			var a: Vector3 = pts[s]
 			var c: Vector3 = pts[s + 1]
 			var mid := (a + c) * 0.5
@@ -82,11 +82,13 @@ func _build_branches() -> void:
 				w.position = mid + nrm2 * (half + 1.2) * side + Vector3(0, wall_h * 0.5, 0)
 				w.rotation.y = yaw
 				add_child(w)
-		# hidden entry disguise: flanking hedges that read as a solid wall
-		# from the racing line but leave the gap driveable
+		# hidden entry: flanking hedges + a sliding gate that seals the mouth.
+		# Closed, it reads as solid hedge wall; the race director opens it for
+		# one lap (see race_manager.hidden_gate_open) and it sinks away.
 		if b["type"] == "hidden":
 			var n0: Vector3 = b["seg_norm"][0]
 			var d0: Vector3 = b["seg_dir"][0]
+			var mouth_yaw := -atan2(d0.z, d0.x)
 			for side in [-1.0, 1.0]:
 				var h := MeshInstance3D.new()
 				var hm := BoxMesh.new()
@@ -94,8 +96,48 @@ func _build_branches() -> void:
 				h.mesh = hm
 				h.material_override = hedge_mat
 				h.position = pts[0] + n0 * (half + 2.8) * side - d0 * 2.0 + Vector3(0, 2.1, 0)
-				h.rotation.y = -atan2(d0.z, d0.x)
+				h.rotation.y = mouth_yaw
 				add_child(h)
+			hidden_gate = MeshInstance3D.new()
+			var gm := BoxMesh.new()
+			gm.size = Vector3(1.6, 4.0, half * 2.0 + 2.0)
+			hidden_gate.mesh = gm
+			hidden_gate.material_override = hedge_mat.duplicate()
+			hidden_gate.position = pts[0] + d0 * 0.5 + Vector3(0, 2.0, 0)
+			hidden_gate.rotation.y = mouth_yaw
+			add_child(hidden_gate)
+			_gate_closed_y = hidden_gate.position.y
+			# signal lamp on a post beside the mouth
+			var post := MeshInstance3D.new()
+			var pm2 := BoxMesh.new()
+			pm2.size = Vector3(0.7, 6.5, 0.7)
+			post.mesh = pm2
+			post.material_override = Pix.flat_mat(Color(0.3, 0.3, 0.33))
+			post.position = pts[0] + n0 * (half + 2.0) + Vector3(0, 3.25, 0)
+			add_child(post)
+			gate_lamp_mat = Pix.flat_mat(Color(0.7, 0.12, 0.1), 1.8)
+			var lamp := MeshInstance3D.new()
+			var lm2 := BoxMesh.new()
+			lm2.size = Vector3(1.4, 1.4, 1.4)
+			lamp.mesh = lm2
+			lamp.material_override = gate_lamp_mat
+			lamp.position = pts[0] + n0 * (half + 2.0) + Vector3(0, 7.0, 0)
+			add_child(lamp)
+
+## Animate the hidden gate (called from main each frame): sinks into the
+## ground while open, lamp flips red -> green.
+var hidden_gate: MeshInstance3D
+var gate_lamp_mat: StandardMaterial3D
+var _gate_closed_y := 2.0
+
+func update_gate(open: bool, dt: float) -> void:
+	if hidden_gate == null:
+		return
+	var target_y := _gate_closed_y - 4.6 if open else _gate_closed_y
+	hidden_gate.position.y = lerpf(hidden_gate.position.y, target_y, 1.0 - exp(-5.0 * dt))
+	var c := Color(0.2, 0.85, 0.3) if open else Color(0.7, 0.12, 0.1)
+	gate_lamp_mat.albedo_color = c
+	gate_lamp_mat.emission = c
 
 # --- generic strip builders -------------------------------------------------
 

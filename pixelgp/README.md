@@ -27,9 +27,10 @@ race. Results show the full classification; Enter or R returns to the menu.
 - **Slipstream**: tuck in behind any car within ~55 units for +9% top speed;
   the HUD shows << SLIPSTREAM >> when it's working. The AI has always had
   this — now you do too.
-- **Rumor**: locals say there's a service alley somewhere on the west
-  promenade that the race organizers never fenced off. It is narrow, slow,
-  and not on the minimap.
+- **Rumor**: there's a gated service alley somewhere on the west promenade.
+  The race director opens it exactly once per race — for the second lap
+  only — and it seals again the moment anyone uses it. Watch for a green
+  lamp. It is narrow, slow, and not on the minimap.
 
 ### Controls
 
