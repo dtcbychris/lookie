@@ -45,8 +45,12 @@ func _ready() -> void:
 	sv.add_child(world)
 	_setup_environment(world)
 
+	# dev hook: runners select a track via env without touching the session
+	var env_track := OS.get_environment("PIXELGP_TRACK")
+	if env_track != "":
+		TrackData.selected_path = env_track
 	var track := TrackData.new()
-	track.load_track()
+	track.load_track(TrackData.selected_path)
 
 	var track_builder: Node3D = TrackBuilder.new()
 	world.add_child(track_builder)

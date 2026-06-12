@@ -31,10 +31,22 @@ func _physics_process(dt: float) -> void:
 		get_tree().reload_current_scene()
 		return
 	if state == State.MENU:
-		# weekend flow: attract mode until the player starts the race
+		# weekend flow: attract mode until the player starts the race;
+		# left/right cycles the championship calendar
 		if Input.is_action_just_pressed("ui_accept"):
 			state = State.COUNTDOWN
 			race_time = -3.6
+		var TD := preload("res://scripts/track_data.gd")
+		var dir := 0
+		if Input.is_action_just_pressed("steer_right"):
+			dir = 1
+		elif Input.is_action_just_pressed("steer_left"):
+			dir = -1
+		if dir != 0:
+			var i: int = TD.TRACKS.find(TD.selected_path)
+			TD.selected_path = TD.TRACKS[posmod(i + dir, TD.TRACKS.size())]
+			get_tree().reload_current_scene()
+			return
 		_update_positions()
 		return
 	if state == State.FINISHED and Input.is_action_just_pressed("ui_accept"):

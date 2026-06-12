@@ -1,0 +1,118 @@
+{
+  "track": "Sakura Speedway",
+  "theme": "fast flowing riverside circuit through a blossom-season hill town",
+  "coordinate_space": "art pixels, origin top-left, y down; multiply by world scale of choice",
+  "direction": "start at checkered flag heading +x (east); loop is counter-screen-clockwise",
+  "centerline_control_points": [
+    [425, 1190], [680, 1194], [950, 1190], [1156, 1176],
+    [1292, 1149], [1360, 1088], [1380, 1006],
+    [1360, 918], [1411, 833], [1377, 748], [1428, 663], [1394, 578],
+    [1428, 493], [1394, 408], [1309, 349],
+    [1190, 323], [1020, 309], [850, 316], [680, 306], [510, 316],
+    [391, 340], [306, 400], [264, 485],
+    [272, 578], [255, 680], [281, 774], [255, 867],
+    [272, 961], [306, 1037], [364, 1105], [408, 1156]
+  ],
+  "spline": "closed Catmull-Rom, 14 samples per segment",
+  "start_finish_art_xy": [435, 1190],
+  "proven_tuning": {
+    "comment": "shared league tuning, validated on Harbor Crown. Units: world px (art px x 2) and seconds.",
+    "MAXV": 215,
+    "ACCEL": 150,
+    "BRAKE": 330,
+    "DRAG": 0.62,
+    "LATG": 140,
+    "track_half_width_world": 23,
+    "boost_multiplier": 1.38,
+    "ai_steer_gain": 4.2,
+    "checkpoints": 8,
+    "laps": 3
+  },
+  "teams": [
+    { "name": "RED FALCON", "primary": "#e23b2e", "secondary": "#8f1d14" },
+    { "name": "BLUE VIPER", "primary": "#2f6fe0", "secondary": "#173e8e" },
+    { "name": "GOLD DUST", "primary": "#e0a92f", "secondary": "#8e6a17" },
+    { "name": "SILVER BULLET", "primary": "#c9ccd4", "secondary": "#7b7e86" }
+  ],
+  "sponsors": [
+    "SAKURA TEA HOUSE",
+    "VELOBANK",
+    "TURBO COLA",
+    "APEX OIL",
+    "KOI RIVER LINE",
+    "RIVIERA RACING LEAGUE"
+  ],
+  "branches": [
+    {
+      "name": "pit",
+      "type": "pit",
+      "half_width": 7,
+      "speed_cap": 95,
+      "points": [[640, 1183], [690, 1167], [740, 1160], [860, 1160], [915, 1167], [962, 1182]]
+    }
+  ],
+  "scenery": {
+    "league": "RIVIERA RACING LEAGUE",
+    "elevation_m": [
+      0.0, 0.0, 0.0, 0.0,
+      0.5, 1.2, 2.0,
+      2.8, 3.6, 4.4, 5.2, 6.0,
+      7.0, 8.0, 8.6,
+      9.0, 9.0, 8.6, 8.2, 7.6,
+      6.6, 5.4, 4.4,
+      3.4, 2.8, 2.2, 1.6,
+      1.0, 0.6, 0.3, 0.1
+    ],
+    "tunnel": { "name": "WISTERIA WAY", "rects": [] },
+    "water": [
+      {
+        "name": "river", "label": "KOI RIVER", "rect": [1450, 350, 250, 850],
+        "quay": "ring", "yachts": 4, "piers_x": [1500, 1560]
+      },
+      { "name": "pond", "rect": [80, 380, 140, 260], "quay": "ring" }
+    ],
+    "ground": [
+      [-160, -160, 1610, 1620],
+      [1450, -160, 450, 510],
+      [1450, 1200, 450, 420],
+      [1700, 350, 200, 850]
+    ],
+    "districts": [
+      { "name": "wood", "rect": [-160, 850, 1260, 710] },
+      { "name": "garden", "rect": [-160, -160, 860, 1010] }
+    ],
+    "district_default": "center",
+    "exclusions": [[620, 1140, 370, 60]],
+    "city_rect": [-140, -140, 1880, 1560],
+    "tree_rect": [-150, -150, 1900, 1580],
+    "tree_palette": [[0.95, 0.7, 0.8], [0.98, 0.82, 0.88], [0.88, 0.55, 0.68], [0.3, 0.5, 0.3]],
+    "petals": { "count": 64, "rect": [150, 150, 1400, 1150] },
+    "palm_rows": [],
+    "umbrella_row": { "from": [1300, 500], "to": [1300, 900], "step": 60 },
+    "umbrella_scatter": 12,
+    "grandstands": [
+      { "at": [800, 1240], "length": 300, "facing": 0 },
+      { "at": [430, 985], "length": 180, "facing": 90 },
+      { "at": [1240, 700], "length": 200, "facing": 270 }
+    ],
+    "landmarks": [
+      { "type": "torii", "at": [150, 510] },
+      { "type": "pagoda", "at": [850, 195] },
+      { "type": "hotel", "at": [620, 1265], "sign": "SAKURA GRAND" }
+    ]
+  },
+  "set_dressing": [
+    { "type": "flag_row", "at": [560, 1240], "facing": 0, "count": 8 },
+    { "type": "flag_row", "at": [900, 255], "facing": 0, "count": 6 },
+    { "type": "big_screen", "at": [1180, 1238], "facing": 290 },
+    { "type": "camera_tower", "at": [1335, 1010], "facing": 270 },
+    { "type": "camera_tower", "at": [330, 545], "facing": 90 },
+    { "type": "marshal_post", "at": [1300, 1120], "facing": 140 },
+    { "type": "marshal_post", "at": [320, 420], "facing": 100 },
+    { "type": "marshal_post", "at": [1340, 560], "facing": 0 },
+    { "type": "cafe_terrace", "at": [1280, 760], "facing": 90 },
+    { "type": "cafe_terrace", "at": [540, 1250], "facing": 0 },
+    { "type": "statue", "at": [700, 640], "facing": 180 },
+    { "type": "helipad", "at": [1790, 560], "facing": 0 }
+  ]
+}

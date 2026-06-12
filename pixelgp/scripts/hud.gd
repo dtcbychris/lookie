@@ -144,7 +144,7 @@ func _build_menu() -> void:
 	t1.text = "PIXELGP"
 	var t2 := _make_label(Vector2(150, 124), 8, Color(0.85, 0.88, 0.95), true)
 	t2.size = Vector2(340, 12)
-	t2.text = track.track_name.to_upper()
+	t2.text = "<  %s  >" % track.track_name.to_upper()
 	var t3 := _make_label(Vector2(150, 138), 8, Color(0.65, 0.5, 0.8), true)
 	t3.size = Vector2(340, 12)
 	t3.text = track.league

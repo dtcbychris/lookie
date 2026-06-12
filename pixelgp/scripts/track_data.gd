@@ -15,6 +15,14 @@ const CHECKPOINT_COUNT := 8
 const CHECKPOINT_INDEX_WINDOW := 22
 const LAPS := 3
 
+## The championship calendar; the menu cycles through these. Selection
+## persists across scene reloads (statics live for the session).
+const TRACKS := [
+	"res://data/harbor_crown_track.json",
+	"res://data/sakura_speedway_track.json",
+]
+static var selected_path: String = TRACKS[0]
+
 ## Elevation, tunnel zones, and all scenery placement now live in the track
 ## JSON's "scenery" section — tracks are data, including their geography.
 

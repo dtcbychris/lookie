@@ -109,7 +109,7 @@ static func _barrier_img() -> Image:
 			img.set_pixel(x, y, c)
 	return img
 
-const DISTRICT_NAMES := ["oldtown", "harbor", "casino", "center"]
+const DISTRICT_NAMES := ["oldtown", "harbor", "casino", "center", "wood", "garden"]
 
 static func facade_named(district: int, idx: int, base: Color, awnings: Array, balconies: bool) -> Texture2D:
 	var fname := "facade_%s_%d" % [DISTRICT_NAMES[district], idx]

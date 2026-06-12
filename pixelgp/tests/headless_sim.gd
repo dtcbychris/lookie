@@ -15,8 +15,17 @@ const LAP_MAX := 55.0
 const MAX_SPREAD := 2.0
 
 func _initialize() -> void:
+	# every track on the calendar must pass the same health checks
+	var all_ok := true
+	for path in TrackData.TRACKS:
+		if not _check_track(path):
+			all_ok = false
+	print("RESULT: %s" % ("PASS" if all_ok else "FAIL"))
+	quit(0 if all_ok else 1)
+
+func _check_track(path: String) -> bool:
 	var track := TrackData.new()
-	track.load_track()
+	track.load_track(path)
 	print("track: %s  samples=%d  length=%.0f world px" % [track.track_name, track.n, track.total_len])
 	print("checkpoints=%d  corners=%d" % [track.checkpoints.size(), track.corners.size()])
 
@@ -72,8 +81,7 @@ func _initialize() -> void:
 		ok = false
 	if not _branch_check(track):
 		ok = false
-	print("RESULT: %s" % ("PASS" if ok else "FAIL"))
-	quit(0 if ok else 1)
+	return ok
 
 ## Drive a scripted car through each branch corridor (pit / hidden) and
 ## assert: it exits back onto the main line, the speed cap holds, and the

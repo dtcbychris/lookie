@@ -9,20 +9,27 @@ const Pix = preload("res://scripts/pixel_textures.gd")
 ## City districts give each part of town its own palette. The style library is
 ## global (keyed by district name); which rect of the map belongs to which
 ## district comes from the track data.
-enum District { OLD_TOWN, HARBOR, CASINO, CENTER }
-const DISTRICT_BY_NAME := {"oldtown": District.OLD_TOWN, "harbor": District.HARBOR, "casino": District.CASINO, "center": District.CENTER}
+enum District { OLD_TOWN, HARBOR, CASINO, CENTER, WOOD, GARDEN }
+const DISTRICT_BY_NAME := {
+	"oldtown": District.OLD_TOWN, "harbor": District.HARBOR, "casino": District.CASINO,
+	"center": District.CENTER, "wood": District.WOOD, "garden": District.GARDEN,
+}
 
 const DISTRICT_WALLS := {
 	District.OLD_TOWN: [Color(0.82, 0.62, 0.4), Color(0.8, 0.55, 0.42), Color(0.85, 0.7, 0.5), Color(0.78, 0.5, 0.34)],
 	District.HARBOR: [Color(0.9, 0.74, 0.72), Color(0.88, 0.84, 0.74), Color(0.72, 0.8, 0.84), Color(0.74, 0.85, 0.76)],
 	District.CASINO: [Color(0.92, 0.89, 0.8), Color(0.95, 0.92, 0.86), Color(0.88, 0.82, 0.66)],
 	District.CENTER: [Color(0.85, 0.78, 0.66), Color(0.75, 0.72, 0.62), Color(0.8, 0.76, 0.72), Color(0.7, 0.66, 0.6)],
+	District.WOOD: [Color(0.42, 0.3, 0.22), Color(0.5, 0.36, 0.26), Color(0.36, 0.26, 0.2), Color(0.55, 0.42, 0.3)],
+	District.GARDEN: [Color(0.9, 0.88, 0.82), Color(0.85, 0.84, 0.78), Color(0.8, 0.78, 0.7), Color(0.88, 0.85, 0.76)],
 }
 const DISTRICT_AWNINGS := {
 	District.OLD_TOWN: [Color(0.25, 0.5, 0.3), Color(0.8, 0.45, 0.15)],
 	District.HARBOR: [Color(0.8, 0.2, 0.18), Color(0.15, 0.5, 0.6)],
 	District.CASINO: [Color(0.7, 0.5, 0.15), Color(0.45, 0.12, 0.2)],
 	District.CENTER: [Color(0.3, 0.35, 0.5), Color(0.55, 0.25, 0.25)],
+	District.WOOD: [Color(0.75, 0.18, 0.15), Color(0.2, 0.25, 0.4)],
+	District.GARDEN: [Color(0.65, 0.15, 0.15), Color(0.25, 0.4, 0.35)],
 }
 ## Terracotta dominates, like the concept art; the casino quarter gets
 ## oxidized-copper green landmarks.
@@ -31,6 +38,8 @@ const DISTRICT_ROOFS := {
 	District.HARBOR: Color(0.72, 0.4, 0.26),
 	District.CASINO: Color(0.42, 0.58, 0.48),
 	District.CENTER: Color(0.66, 0.38, 0.24),
+	District.WOOD: Color(0.3, 0.32, 0.4),     # slate
+	District.GARDEN: Color(0.36, 0.4, 0.48),
 }
 
 func _district(a: Vector2) -> int:
@@ -59,7 +68,7 @@ var _exclusions: Array[Rect2] = []
 
 ## Ground footprint (art px, square side) auto-reserved around each landmark
 ## set piece so the RNG city scatter keeps clear.
-const LANDMARK_RESERVE := {"casino": 58, "yacht_club": 46, "church": 46, "hotel": 56}
+const LANDMARK_RESERVE := {"casino": 58, "yacht_club": 46, "church": 46, "hotel": 56, "torii": 30, "pagoda": 50}
 
 ## Ground footprint (art px, square side) auto-reserved around each
 ## set-dressing entry so RNG buildings/trees keep clear.
@@ -129,6 +138,11 @@ func build(p_track) -> void:
 				_build_church(lm)
 			"hotel":
 				_build_hotel(lm)
+			"torii":
+				_build_torii(lm)
+			"pagoda":
+				_build_pagoda(lm)
+	_build_petals()
 	_build_trees()
 	_build_grandstands()
 	_build_trackside_crowds()
@@ -158,6 +172,13 @@ func _process(_delta: float) -> void:
 		y.position.y = -3.2 + sin(t * 1.2 + float(i)) * 0.3
 	if _casino_sign:
 		_casino_sign.modulate.a = 0.75 + 0.25 * sin(t * 4.0)
+	for pd in _petals:
+		var node: MeshInstance3D = pd["node"]
+		node.position.y -= pd["fall"] * _delta
+		node.position.x += sin(t * 0.8 + pd["phase"]) * 6.0 * _delta
+		node.rotation.y += _delta * 2.0
+		if node.position.y < 0.5:
+			node.position.y = _rng.randf_range(24.0, 32.0)
 	# two-frame crowd bob
 	var fi := 0 if fmod(t, 0.7) < 0.35 else 1
 	if fi != _crowd_frame:
@@ -379,9 +400,14 @@ func _build_city() -> void:
 ## Lush tree cover wherever there's no water, road, or building — the concept
 ## art has essentially zero bare ground.
 func _build_trees() -> void:
-	var greens := [Color(0.22, 0.48, 0.26), Color(0.3, 0.56, 0.3), Color(0.18, 0.42, 0.23), Color(0.42, 0.52, 0.22)]
+	var palette: Array = _kit.get("tree_palette", [])
+	var crowns := [Color(0.22, 0.48, 0.26), Color(0.3, 0.56, 0.3), Color(0.18, 0.42, 0.23), Color(0.42, 0.52, 0.22)]
+	if not palette.is_empty():
+		crowns = []
+		for c in palette:
+			crowns.append(Color(c[0], c[1], c[2]))
 	var crown_mats: Array = []
-	for g in greens:
+	for g in crowns:
 		crown_mats.append(Pix.flat_mat(g))
 	var trunk_mat := Pix.flat_mat(Color(0.42, 0.3, 0.2))
 	_rng.seed = 8
@@ -790,6 +816,67 @@ func _build_hotel(lm: Dictionary) -> void:
 	_label(lm.get("sign", "GRAND HOTEL"), Vector3(cx, 72.5, cz - 5), Vector3(0, 0, 1), Color(1.0, 0.84, 0.2), 32, 0.1)
 	_tree_pair(Vector3(cx - 42, 0, cz + 22))
 	_tree_pair(Vector3(cx + 42, 0, cz + 22))
+
+## Vermilion torii gate — can stand on land or in water (Miyajima style).
+func _build_torii(lm: Dictionary) -> void:
+	var cx: float = lm["at"][0] * 2.0
+	var cz: float = lm["at"][1] * 2.0
+	var base_y: float = lm.get("base_y", -4.0 if _in_water_art(Vector2(lm["at"][0], lm["at"][1])) else 0.0)
+	var verm := Pix.flat_mat(Color(0.82, 0.22, 0.12))
+	var ink := Pix.flat_mat(Color(0.12, 0.1, 0.1))
+	for side in [-1.0, 1.0]:
+		_box(Vector3(2.6, 18, 2.6), Vector3(cx, base_y + 9, cz + side * 10.0), verm)
+		_box(Vector3(3.2, 1.2, 3.2), Vector3(cx, base_y + 18.2, cz + side * 10.0), ink)
+	_box(Vector3(2.2, 2.2, 30), Vector3(cx, base_y + 20.4, cz), verm)   # kasagi
+	_box(Vector3(2.6, 1.2, 31), Vector3(cx, base_y + 21.8, cz), ink)    # cap
+	_box(Vector3(1.8, 1.8, 24), Vector3(cx, base_y + 16.2, cz), verm)   # nuki
+	_box(Vector3(1.6, 3.2, 1.6), Vector3(cx, base_y + 18.4, cz), verm)  # gakuzuka
+
+## Five-tier pagoda with slate roofs and a gold spire.
+func _build_pagoda(lm: Dictionary) -> void:
+	var cx: float = lm["at"][0] * 2.0
+	var cz: float = lm["at"][1] * 2.0
+	var base_y: float = lm.get("base_y", 0.0)
+	var wallm := Pix.flat_mat(Color(0.88, 0.84, 0.74))
+	var wood := Pix.flat_mat(Color(0.4, 0.28, 0.2))
+	var roof := Pix.flat_mat(Color(0.28, 0.3, 0.38))
+	_box(Vector3(46, 3, 46), Vector3(cx, base_y + 1.5, cz), Pix.flat_mat(Color(0.7, 0.66, 0.58)))
+	var y := base_y + 3.0
+	var w := 34.0
+	for tier in 5:
+		_box(Vector3(w, 7.0, w), Vector3(cx, y + 3.5, cz), wallm if tier % 2 == 0 else wood)
+		_box(Vector3(w + 10.0, 1.8, w + 10.0), Vector3(cx, y + 7.6, cz), roof)
+		_box(Vector3(w + 4.0, 1.0, w + 4.0), Vector3(cx, y + 8.8, cz), roof)
+		y += 9.2
+		w *= 0.82
+	_box(Vector3(1.4, 9, 1.4), Vector3(cx, y + 4.0, cz), Pix.flat_mat(Color(0.85, 0.68, 0.28), 0.4))
+
+## Falling cherry-blossom petals — the track's signature animated system,
+## driven by the kit's "petals" config.
+var _petals: Array = []  # {"node": MeshInstance3D, "phase": float, "fall": float}
+
+func _build_petals() -> void:
+	if not _kit.has("petals"):
+		return
+	_rng.seed = 14
+	var pk: Dictionary = _kit["petals"]
+	var r: Array = pk["rect"]
+	var pmat := Pix.flat_mat(Color(0.97, 0.78, 0.86), 0.25)
+	pmat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	for k in int(pk.get("count", 60)):
+		var quad := MeshInstance3D.new()
+		var qm := QuadMesh.new()
+		qm.size = Vector2(1.3, 1.3)
+		quad.mesh = qm
+		quad.material_override = pmat
+		quad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		quad.position = Vector3(
+			_rng.randf_range(r[0], r[0] + r[2]) * 2.0,
+			_rng.randf_range(2.0, 30.0),
+			_rng.randf_range(r[1], r[1] + r[3]) * 2.0)
+		quad.rotation.x = -PI / 3.0
+		add_child(quad)
+		_petals.append({"node": quad, "phase": _rng.randf_range(0, TAU), "fall": _rng.randf_range(2.5, 5.0)})
 
 func _tree_pair(pos: Vector3) -> void:
 	var trunk := Pix.flat_mat(Color(0.42, 0.3, 0.2))
