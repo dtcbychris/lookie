@@ -15,20 +15,8 @@ const CHECKPOINT_COUNT := 8
 const CHECKPOINT_INDEX_WINDOW := 22
 const LAPS := 3
 
-## Hand-authored elevation per control point (meters), following the JSON's
-## elevation_intent: harbor level at start, climb the esses to the casino
-## crest (+12 m), descend back to the harbor. The tunnel runs at harbor grade:
-## any dip puts the road surface within z-fighting range of the ground slab
-## (playtest: "see-through road") — the covered ribs sell the tunnel instead.
-const ELEVATION_M := [
-	0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-	0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3,
-	0.8, 1.6, 2.5, 3.4, 4.4, 5.4, 6.4, 7.4, 8.4, 9.2,
-	9.9, 10.5, 11.2, 11.7, 12.0, 12.0, 12.0, 12.0, 11.8, 11.4,
-	11.0, 10.5, 10.0, 9.4, 8.8, 8.2, 7.6, 7.0, 6.5, 6.1,
-	5.7, 5.3, 4.9, 4.5, 4.1, 3.7, 3.2, 2.6, 1.9, 1.1,
-	0.6, 0.2, 0.0,
-]
+## Elevation, tunnel zones, and all scenery placement now live in the track
+## JSON's "scenery" section — tracks are data, including their geography.
 
 var samples: PackedVector3Array
 var art: PackedVector2Array          # sample positions in art px, for region tests
@@ -47,6 +35,10 @@ var sponsors: Array = []
 var tuning: Dictionary = {}
 var set_dressing: Array = []   # hand-placed prop layer (see set_dressing.gd)
 var branches: Array = []       # alternate corridors (pit lane, hidden paths)
+var scenery: Dictionary = {}   # the track kit (water, districts, landmarks...)
+var league := ""
+var tunnel_name := "TUNNEL"
+var tunnel_rects: Array[Rect2] = []  # art-space covered sections
 var track_name := "Harbor Crown Circuit"
 
 func load_track(path := "res://data/harbor_crown_track.json") -> void:
@@ -56,12 +48,21 @@ func load_track(path := "res://data/harbor_crown_track.json") -> void:
 	sponsors = data["sponsors"]
 	tuning = data["proven_tuning"]
 	set_dressing = data.get("set_dressing", [])
+	scenery = data.get("scenery", {})
+	league = scenery.get("league", "")
+	var tun: Dictionary = scenery.get("tunnel", {})
+	tunnel_name = tun.get("name", "TUNNEL")
+	tunnel_rects.clear()
+	for r in tun.get("rects", []):
+		tunnel_rects.append(Rect2(r[0], r[1], r[2], r[3]))
 	var cps: Array = data["centerline_control_points"]
+	var elev: Array = scenery.get("elevation_m", [])
 	var m := cps.size()
 	var ctrl: Array[Vector3] = []
 	for i in m:
 		var p: Array = cps[i]
-		ctrl.append(Vector3(p[0] * WORLD_SCALE, ELEVATION_M[i] * ELEV_SCALE + ROAD_BASE, p[1] * WORLD_SCALE))
+		var e: float = elev[i] if i < elev.size() else 0.0
+		ctrl.append(Vector3(p[0] * WORLD_SCALE, e * ELEV_SCALE + ROAD_BASE, p[1] * WORLD_SCALE))
 	var pts := PackedVector3Array()
 	for i in m:
 		var p0 := ctrl[(i - 1 + m) % m]
@@ -283,7 +284,10 @@ func min_dist_to_track(x: float, z: float) -> float:
 
 func in_tunnel(i: int) -> bool:
 	var a := art[i]
-	return a.y > 700.0 and a.x > 300.0 and a.x < 680.0
+	for r in tunnel_rects:
+		if r.has_point(a):
+			return true
+	return false
 
 func grid_slot(slot: int) -> Dictionary:
 	# staggered 2-wide grid behind the start line; slot 0 = pole

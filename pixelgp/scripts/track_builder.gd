@@ -417,7 +417,7 @@ func _portal(i: int) -> void:
 	_portal_part(root, Vector3(5.5, 1.4, (lat + 3.0) * 2.0), Vector3(0, 18.7, 0), trim, true)
 	_portal_part(root, Vector3(4, 2.4, 12), Vector3(0, 20.6, 0), stone, true)
 	var lbl := Label3D.new()
-	lbl.text = "AZURE TUNNEL"
+	lbl.text = track.tunnel_name
 	lbl.font = Pix.pixel_font()
 	lbl.font_size = 48
 	lbl.pixel_size = 0.08
@@ -469,7 +469,7 @@ func _build_start_line() -> void:
 	beam.rotation.y = yaw
 	add_child(beam)
 	var lbl := Label3D.new()
-	lbl.text = "HARBOR CROWN CIRCUIT"
+	lbl.text = track.track_name.to_upper()
 	lbl.font = Pix.pixel_font()
 	lbl.font_size = 32
 	lbl.pixel_size = 0.08

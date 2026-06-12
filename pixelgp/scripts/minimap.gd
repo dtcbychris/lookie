@@ -2,27 +2,36 @@ extends Control
 ## Minimap: track polyline, start line, sector ticks, and live car dots.
 ## Drawn from the same TrackData art-space samples the level is built from.
 
-const ART_MIN := Vector2(104, 107)
-const ART_MAX := Vector2(853, 754)
-const MAP_SCALE := 0.165
 const PAD := 7.0
+const MAP_LONG_SIDE := 128.0  # px budget for the larger axis
 
 var track  # TrackData
 var race  # RaceManager
 var colors: Array = []
+var _art_min := Vector2.ZERO
+var _map_scale := 0.165
 
 func setup(p_track, p_race, p_colors: Array) -> void:
 	track = p_track
 	race = p_race
 	colors = p_colors
-	custom_minimum_size = (ART_MAX - ART_MIN) * MAP_SCALE + Vector2(PAD * 2, PAD * 2)
+	# fit whatever circuit the data describes
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for a in track.art:
+		lo = lo.min(a)
+		hi = hi.max(a)
+	_art_min = lo
+	var span := hi - lo
+	_map_scale = MAP_LONG_SIDE / maxf(span.x, span.y)
+	custom_minimum_size = span * _map_scale + Vector2(PAD * 2, PAD * 2)
 	size = custom_minimum_size
 
 func _process(_dt: float) -> void:
 	queue_redraw()
 
 func _map(a: Vector2) -> Vector2:
-	return (a - ART_MIN) * MAP_SCALE + Vector2(PAD, PAD)
+	return (a - _art_min) * _map_scale + Vector2(PAD, PAD)
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.03, 0.06, 0.65))

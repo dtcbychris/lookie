@@ -103,6 +103,27 @@ sponsor canon. Everything else is generated from it at load:
 
 Units: 1 Godot unit = 1 "world px" (art px × 2), matching `proven_tuning`.
 
+## The track kit (how a new circuit ships)
+
+A track is ONE json file. Beyond the centerline/tuning/teams it carries:
+
+- `scenery.elevation_m` — per-control-point elevation profile
+- `scenery.tunnel` — covered sections (named, art-px rects)
+- `scenery.water` — water zones with per-zone features (quay style, label,
+  berthed yachts, drifting yachts + drift area, buoys, piers)
+- `scenery.ground` — land slabs
+- `scenery.districts` — ordered art-px rects mapping to the global district
+  style library (oldtown/harbor/casino/center palettes)
+- `scenery.exclusions`, `city_rect`, `tree_rect` — RNG scatter control
+- `scenery.landmarks` — placements for the hand-authored set-piece library
+  (casino, yacht_club, church, hotel), with sign text per instance
+- `scenery.grandstands`, `palm_rows`, `umbrella_row` — placed furniture
+- `branches` — pit lane + hidden paths (smooth splines, physics + visuals)
+- `set_dressing` — the prop layer (cranes, screens, marshals, helipad...)
+
+The scenery builder, track builder, HUD, and minimap contain no
+circuit-specific values; they render whatever the data describes.
+
 ## Texture override pipeline (the art upgrade path)
 
 Every texture is requested by name through `pixel_textures.named_tex()`:

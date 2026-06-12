@@ -336,6 +336,57 @@
       "points": [[213, 634], [197, 646], [187, 668], [186, 700], [199, 727], [224, 742], [247, 747]]
     }
   ],
+  "scenery_comment": "the track kit: everything the scenery builder needs, in art px. rects are [x, y, w, h]. Districts are ordered rules (first hit wins). Landmark types map to the hand-authored set-piece library in scenery_builder.gd.",
+  "scenery": {
+    "league": "RIVIERA RACING LEAGUE",
+    "elevation_m": [
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3,
+      0.8, 1.6, 2.5, 3.4, 4.4, 5.4, 6.4, 7.4, 8.4, 9.2,
+      9.9, 10.5, 11.2, 11.7, 12.0, 12.0, 12.0, 12.0, 11.8, 11.4,
+      11.0, 10.5, 10.0, 9.4, 8.8, 8.2, 7.6, 7.0, 6.5, 6.1,
+      5.7, 5.3, 4.9, 4.5, 4.1, 3.7, 3.2, 2.6, 1.9, 1.1,
+      0.6, 0.2, 0.0
+    ],
+    "tunnel": { "name": "AZURE TUNNEL", "rects": [[300, 700, 380, 80]] },
+    "water": [
+      {
+        "name": "marina", "label": "AZURE BAY MARINA", "rect": [200, 652, 520, 80],
+        "quay": "ring", "yachts": 19, "buoys": 8, "piers_x": [250, 350, 450, 560]
+      },
+      {
+        "name": "sea", "rect": [-160, 772, 1260, 330], "quay": "north",
+        "open_south": true, "drifting_yachts": 6, "drift_rect": [50, 800, 800, 130]
+      }
+    ],
+    "ground": [[-160, -160, 1260, 812], [-160, 732, 1260, 40], [-160, 652, 360, 80], [720, 652, 380, 80]],
+    "districts": [
+      { "name": "casino", "rect": [730, -160, 430, 540] },
+      { "name": "harbor", "rect": [-160, 560, 1320, 720] },
+      { "name": "oldtown", "rect": [-160, -160, 430, 1320] }
+    ],
+    "district_default": "center",
+    "exclusions": [[195, 580, 265, 75]],
+    "city_rect": [-130, -130, 1190, 890],
+    "tree_rect": [-150, -150, 1230, 918],
+    "palm_rows": [
+      { "from": [230, 645], "to": [700, 645], "step": 55 },
+      { "from": [100, 764], "to": [880, 764], "step": 75 }
+    ],
+    "umbrella_row": { "from": [262, 644], "to": [700, 644], "step": 52 },
+    "umbrella_scatter": 16,
+    "grandstands": [
+      { "at": [350, 643], "length": 250, "facing": 0 },
+      { "at": [886, 190], "length": 220, "facing": 90, "y": 44 },
+      { "at": [64, 680], "length": 150, "facing": 270 }
+    ],
+    "landmarks": [
+      { "type": "casino", "at": [818, 178], "sign": "CROWN CASINO", "base_y": 51 },
+      { "type": "yacht_club", "at": [745, 680], "sign": "YACHT CLUB" },
+      { "type": "church", "at": [250, 430] },
+      { "type": "hotel", "at": [345, 528], "sign": "GRAND RIVIERA" }
+    ]
+  },
   "set_dressing_comment": "hand-placed composition layer; art-px coords, facing in degrees (0=+x east, 90=+z south). Rendered by scripts/set_dressing.gd prop library.",
   "set_dressing": [
     { "type": "flag_row", "at": [300, 560], "facing": 0, "count": 8 },
